@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
+import os
+import shlex
+import subprocess
+from typing import Any
 
 from medreason_graph.lexicon import CONCEPTS
 from medreason_graph.logging_utils import log_event
-from medreason_graph.models import EVIDENCE_CLAIM_SCHEMA, EvidenceClaim, PatientCase, RetrievalHit
+from medreason_graph.models import EVIDENCE_CLAIM_SCHEMA, EvidenceClaim, PatientCase, RetrievalHit, SourceChunk
 from medreason_graph.text import canonicalize_term, detect_concepts, normalize, phrase_in_text, sentence_spans
 
 SUPPORT_CUES = (
@@ -52,7 +57,29 @@ EXTRACTION_METHOD = "deterministic_cue_v1"
 logger = logging.getLogger(__name__)
 
 
-def extract_evidence_claims(hits: list[RetrievalHit], case: PatientCase) -> list[EvidenceClaim]:
+def extract_evidence_claims(
+    hits: list[RetrievalHit],
+    case: PatientCase,
+    *,
+    extractor: str = "deterministic",
+    llm_command: str | None = None,
+    llm_timeout_seconds: float = 60.0,
+    llm_fallback_to_deterministic: bool = False,
+) -> list[EvidenceClaim]:
+    if extractor == "deterministic":
+        return extract_deterministic_evidence_claims(hits, case)
+    if extractor == "llm":
+        return extract_llm_evidence_claims(
+            hits,
+            case,
+            command=llm_command,
+            timeout_seconds=llm_timeout_seconds,
+            fallback_to_deterministic=llm_fallback_to_deterministic,
+        )
+    raise ValueError(f"unsupported evidence extractor: {extractor}")
+
+
+def extract_deterministic_evidence_claims(hits: list[RetrievalHit], case: PatientCase) -> list[EvidenceClaim]:
     patient_concepts = _case_concepts_by_status(case)
     claims: list[EvidenceClaim] = []
     seen: set[tuple[str, str, str | None, str, str]] = set()
@@ -112,6 +139,82 @@ def extract_evidence_claims(hits: list[RetrievalHit], case: PatientCase) -> list
     return claims
 
 
+def extract_llm_evidence_claims(
+    hits: list[RetrievalHit],
+    case: PatientCase,
+    *,
+    command: str | None = None,
+    timeout_seconds: float = 60.0,
+    fallback_to_deterministic: bool = False,
+) -> list[EvidenceClaim]:
+    command = command or os.environ.get("MEDREASON_LLM_COMMAND")
+    if not command:
+        raise ValueError("LLM extraction requires --llm-command or MEDREASON_LLM_COMMAND")
+
+    claims: list[EvidenceClaim] = []
+    seen: set[tuple[str, str, str | None, str, str]] = set()
+    for hit in hits:
+        try:
+            raw_items = _run_llm_command(
+                command=command,
+                payload=build_llm_extraction_payload(hit, case),
+                timeout_seconds=timeout_seconds,
+            )
+        except (OSError, subprocess.SubprocessError, json.JSONDecodeError, ValueError) as exc:
+            if not fallback_to_deterministic:
+                raise RuntimeError(f"LLM extraction failed for chunk {hit.chunk.id}: {exc}") from exc
+            log_event(logger, "llm_extraction_failed_with_fallback", chunk_id=hit.chunk.id, error=str(exc))
+            claims.extend(extract_deterministic_evidence_claims([hit], case))
+            continue
+
+        accepted_for_hit = 0
+        for item in raw_items:
+            claim = _claim_from_llm_item(item, hit.chunk)
+            if claim is None:
+                log_event(logger, "llm_claim_rejected", chunk_id=hit.chunk.id, reason="unusable_span_or_fields")
+                continue
+            errors = validate_evidence_claim(claim, hit.chunk.text)
+            if errors:
+                log_event(logger, "llm_claim_rejected", chunk_id=hit.chunk.id, claim_id=claim.id, errors=errors)
+                continue
+            key = (claim.condition, claim.finding or "", claim.polarity, claim.source_id, claim.sentence)
+            if key in seen:
+                continue
+            seen.add(key)
+            accepted_for_hit += 1
+            claims.append(claim)
+        if fallback_to_deterministic and accepted_for_hit == 0:
+            claims.extend(extract_deterministic_evidence_claims([hit], case))
+
+    log_event(logger, "llm_evidence_extracted", hits=len(hits), claims=len(claims), command=_command_label(command))
+    return claims
+
+
+def build_llm_extraction_payload(hit: RetrievalHit, case: PatientCase) -> dict[str, Any]:
+    return {
+        "task": "extract_medical_evidence_claims",
+        "schema": EVIDENCE_CLAIM_SCHEMA,
+        "instructions": (
+            "Extract only evidence claims directly supported by the source passage. "
+            "Return JSON only: {\"claims\": [...]}. Every claim must include claim_type, "
+            "condition, finding, polarity, strength, exact_quote, source_span_start, "
+            "source_span_end, and extraction_confidence. The exact_quote must be copied "
+            "verbatim from source.text. Do not infer facts from outside the source."
+        ),
+        "allowed_claim_types": EVIDENCE_CLAIM_SCHEMA["properties"]["claim_type"]["enum"],
+        "allowed_polarities": EVIDENCE_CLAIM_SCHEMA["properties"]["polarity"]["enum"],
+        "allowed_strengths": EVIDENCE_CLAIM_SCHEMA["properties"]["strength"]["enum"],
+        "case": case.to_dict(),
+        "retrieval": {
+            "score": hit.score,
+            "matched_terms": hit.matched_terms,
+            "score_parts": hit.score_parts,
+            "query_labels": hit.query_labels,
+        },
+        "source": hit.chunk.to_dict(),
+    }
+
+
 def validate_evidence_claim(claim: EvidenceClaim, source_text: str | None = None) -> list[str]:
     errors: list[str] = []
     properties = EVIDENCE_CLAIM_SCHEMA["properties"]
@@ -147,6 +250,147 @@ def validate_evidence_claim(claim: EvidenceClaim, source_text: str | None = None
             if _source_text_hash(source_text) != claim.source_text_hash:
                 errors.append("source_text_hash_mismatch")
     return errors
+
+
+def _run_llm_command(*, command: str, payload: dict[str, Any], timeout_seconds: float) -> list[dict[str, Any]]:
+    completed = subprocess.run(
+        shlex.split(command),
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        timeout=timeout_seconds,
+        check=False,
+    )
+    if completed.returncode != 0:
+        stderr = completed.stderr.strip()
+        raise subprocess.SubprocessError(stderr or f"LLM command exited with {completed.returncode}")
+    output = json.loads(completed.stdout)
+    if isinstance(output, list):
+        raw_claims = output
+    elif isinstance(output, dict):
+        raw_claims = output.get("claims", [])
+    else:
+        raise ValueError("LLM command must return a JSON object or array")
+    if not isinstance(raw_claims, list):
+        raise ValueError("LLM command JSON field 'claims' must be a list")
+    return [claim for claim in raw_claims if isinstance(claim, dict)]
+
+
+def _claim_from_llm_item(item: dict[str, Any], chunk: SourceChunk) -> EvidenceClaim | None:
+    span = _resolve_llm_span(item, chunk.text)
+    if span is None:
+        return None
+    sentence, span_start, span_end = span
+    claim_type = _normalize_claim_type(str(item.get("claim_type", "")))
+    if not claim_type:
+        return None
+    condition = _canonical_or_raw(str(item.get("condition", "")), kind="condition")
+    if not condition:
+        return None
+    finding_raw = item.get("finding") or item.get("finding_or_test") or item.get("test") or item.get("intervention")
+    finding = _canonical_or_raw(str(finding_raw), kind=None) if finding_raw else None
+    polarity = _normalize_polarity(str(item.get("polarity", "")), claim_type)
+    strength = _normalize_strength(str(item.get("strength", "")))
+    confidence = _normalize_confidence(item.get("extraction_confidence", item.get("confidence", 0.5)))
+    claim_id = _claim_id(condition, finding or "", polarity, chunk.id, sentence)
+    return EvidenceClaim(
+        id=claim_id,
+        claim_type=claim_type,
+        condition=condition,
+        finding=finding,
+        polarity=polarity,
+        strength=strength,
+        source_id=chunk.id,
+        source_type=chunk.source_type,
+        source_title=chunk.title,
+        section_path=chunk.section_path,
+        paragraph_index=chunk.paragraph_index,
+        sentence=sentence,
+        source_span_start=span_start,
+        source_span_end=span_end,
+        source_text_hash=_source_text_hash(chunk.text),
+        extraction_confidence=confidence,
+        extraction_method="llm_command_v1",
+    )
+
+
+def _resolve_llm_span(item: dict[str, Any], source_text: str) -> tuple[str, int, int] | None:
+    quote = str(item.get("exact_quote") or item.get("sentence") or item.get("source_span_text") or "").strip()
+    start = _optional_int(item.get("source_span_start"))
+    end = _optional_int(item.get("source_span_end"))
+    if start is not None and end is not None and 0 <= start < end <= len(source_text):
+        span_text = source_text[start:end]
+        if not quote or span_text == quote:
+            return span_text, start, end
+        return None
+    if not quote:
+        return None
+    start = source_text.find(quote)
+    if start < 0:
+        return None
+    return quote, start, start + len(quote)
+
+
+def _normalize_claim_type(value: str) -> str:
+    normalized = normalize(value).replace(" ", "_")
+    aliases = {
+        "finding_supports_condition": "supports",
+        "finding_argues_against_condition": "argues_against",
+        "recommends_test": "requires_test",
+        "test_recommended": "requires_test",
+        "rule_out": "rules_out",
+        "rule_in": "rules_in",
+    }
+    normalized = aliases.get(normalized, normalized)
+    allowed = EVIDENCE_CLAIM_SCHEMA["properties"]["claim_type"]["enum"]
+    return normalized if normalized in allowed else ""
+
+
+def _normalize_polarity(value: str, claim_type: str) -> str:
+    normalized = normalize(value).replace(" ", "_")
+    if normalized in EVIDENCE_CLAIM_SCHEMA["properties"]["polarity"]["enum"]:
+        return normalized
+    if claim_type in {"argues_against", "rules_out", "contraindicates"}:
+        return "argues_against"
+    if claim_type in {"requires_test", "treatment_recommends"}:
+        return "recommends"
+    return "supports"
+
+
+def _normalize_strength(value: str) -> str:
+    normalized = normalize(value)
+    if normalized in EVIDENCE_CLAIM_SCHEMA["properties"]["strength"]["enum"]:
+        return normalized
+    return "moderate"
+
+
+def _normalize_confidence(value: Any) -> float:
+    try:
+        confidence = float(value)
+    except (TypeError, ValueError):
+        confidence = 0.5
+    return max(0.0, min(round(confidence, 2), 1.0))
+
+
+def _canonical_or_raw(value: str, kind: str | None) -> str:
+    value = value.strip()
+    if not value:
+        return ""
+    return canonicalize_term(value, kind=kind) or normalize(value)
+
+
+def _optional_int(value: Any) -> int | None:
+    try:
+        if value is None:
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _command_label(command: str) -> str:
+    parts = shlex.split(command)
+    return parts[0] if parts else command
 
 
 def _case_concepts_by_status(case: PatientCase) -> dict[str, set[str]]:

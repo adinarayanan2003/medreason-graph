@@ -36,6 +36,10 @@ def main() -> int:
     analyze.add_argument("--json", action="store_true")
     analyze.add_argument("--retriever", choices=("memory", "sqlite", "faiss"), default="memory")
     analyze.add_argument("--index")
+    analyze.add_argument("--evidence-extractor", choices=("deterministic", "llm"), default="deterministic")
+    analyze.add_argument("--llm-command")
+    analyze.add_argument("--llm-timeout-seconds", type=float, default=60.0)
+    analyze.add_argument("--llm-fallback-to-deterministic", action="store_true")
     analyze.add_argument("--config")
     analyze.add_argument("--verbose", action="store_true")
 
@@ -46,6 +50,10 @@ def main() -> int:
     graph.add_argument("--format", choices=("json", "cytoscape", "dot"), default="json")
     graph.add_argument("--retriever", choices=("memory", "sqlite", "faiss"), default="memory")
     graph.add_argument("--index")
+    graph.add_argument("--evidence-extractor", choices=("deterministic", "llm"), default="deterministic")
+    graph.add_argument("--llm-command")
+    graph.add_argument("--llm-timeout-seconds", type=float, default=60.0)
+    graph.add_argument("--llm-fallback-to-deterministic", action="store_true")
     graph.add_argument("--config")
     graph.add_argument("--verbose", action="store_true")
 
@@ -169,7 +177,14 @@ def main() -> int:
         chunks = load_chunks(args.corpus)
         case = PatientCase.from_dict(json.loads(Path(args.case).read_text(encoding="utf-8")))
         retriever = _retriever_for_args(args, chunks)
-        result = MedReasonAnalyzer(chunks, retriever=retriever).analyze(case)
+        result = MedReasonAnalyzer(
+            chunks,
+            retriever=retriever,
+            evidence_extractor=args.evidence_extractor,
+            llm_command=args.llm_command,
+            llm_timeout_seconds=args.llm_timeout_seconds,
+            llm_fallback_to_deterministic=args.llm_fallback_to_deterministic,
+        ).analyze(case)
         _close_retriever(retriever)
         if args.command == "graph":
             if args.format == "cytoscape":

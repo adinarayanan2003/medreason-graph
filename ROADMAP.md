@@ -123,14 +123,16 @@ Acceptance:
 
 ## Stage 5: Evidence Claim Extraction
 
-Status: in progress; Stage 5A complete.
+Status: in progress; Stage 5A and 5B complete.
 
 Goal: extract higher-quality structured evidence from source passages.
 
 - Stage 5A completed:
   evidence claim JSON schema, extraction confidence/method fields, exact source-span offsets, source-text hashes, schema/span validation before claim acceptance, `requires_test` claim typing, `rules_out` detection, and "does not exclude/rule out" handling.
-- Replace remaining simple cue-based extraction with a broader structured extractor.
-- Use an LLM or fine-tuned small model to emit evidence claims in a strict schema.
+- Stage 5B completed:
+  pluggable evidence extractor selection, command-based LLM adapter, strict JSON input/output contract, LLM claim validation against exact source text, optional deterministic fallback, CLI/API controls, and tests that reject non-verbatim LLM claims.
+- Replace remaining simple cue-based extraction with broader deterministic and LLM-backed structured extraction.
+- Add direct provider adapters or fine-tuned small model support for emitting evidence claims in the same strict schema.
 - Add review workflow and calibration for extraction confidence.
 - Represent:
   `supports`, `argues_against`, `requires_test`, `rules_in`, `rules_out`, `contraindicates`, `red_flag`, `treatment_recommends`.

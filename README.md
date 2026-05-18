@@ -70,8 +70,8 @@ medreason-graph analyze --corpus /tmp/medreason_corpus.json --case examples/case
 
 ```text
 medreason-graph ingest PATH --out corpus.json [--source-type guideline]
-medreason-graph analyze --corpus corpus.json --case case.json [--json] [--config config/default_clinical_config.json] [--verbose]
-medreason-graph graph --corpus corpus.json --case case.json --format json|cytoscape|dot --out graph.json
+medreason-graph analyze --corpus corpus.json --case case.json [--json] [--evidence-extractor deterministic|llm] [--llm-command CMD] [--config config/default_clinical_config.json] [--verbose]
+medreason-graph graph --corpus corpus.json --case case.json --format json|cytoscape|dot --out graph.json [--evidence-extractor deterministic|llm] [--llm-command CMD]
 medreason-graph download-sources --manifest sources/open_medical_sources.json --out-dir data/open_sources
 medreason-graph build-open-corpus --downloaded-manifest data/open_sources/downloaded_manifest.json --out data/open_corpus/open_medical_corpus.json
 medreason-graph index-corpus --corpus data/open_corpus/open_medical_corpus.json --out data/open_corpus/open_medical_corpus.sqlite
@@ -157,6 +157,37 @@ Retrieved passages are converted into structured `EvidenceClaim` records before 
 - extraction method.
 
 The deterministic extractor currently handles `supports`, `argues_against`, `requires_test`, `rules_out`, and `red_flag` claim types. Spanless or schema-invalid claims are rejected before graph construction.
+
+For richer extraction, use the LLM command adapter:
+
+```bash
+medreason-graph analyze \
+  --corpus data/open_corpus/open_medical_corpus.json \
+  --case examples/cases/chest_pain.json \
+  --evidence-extractor llm \
+  --llm-command "python path/to/extractor_adapter.py" \
+  --llm-fallback-to-deterministic
+```
+
+The command receives a JSON payload on stdin with the patient case, retrieved source chunk, and evidence-claim schema. It must write JSON to stdout:
+
+```json
+{
+  "claims": [
+    {
+      "claim_type": "supports",
+      "condition": "acute coronary syndrome",
+      "finding": "chest pain",
+      "polarity": "supports",
+      "strength": "moderate",
+      "exact_quote": "Myocardial ischemia can present as chest pain.",
+      "extraction_confidence": 0.82
+    }
+  ]
+}
+```
+
+The validator accepts only claims whose quote or offsets match the retrieved source text exactly.
 
 ## Configuration
 

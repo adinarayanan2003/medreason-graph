@@ -43,12 +43,22 @@ def create_app():
         if payload.get("config_path"):
             load_and_apply_config(payload["config_path"])
         corpus_path = payload.pop("corpus_path", None)
+        evidence_extractor = payload.pop("evidence_extractor", "deterministic")
+        llm_command = payload.pop("llm_command", None)
+        llm_timeout_seconds = float(payload.pop("llm_timeout_seconds", 60.0))
+        llm_fallback_to_deterministic = bool(payload.pop("llm_fallback_to_deterministic", False))
         payload.pop("config_path", None)
         chunks = load_chunks(corpus_path) if corpus_path else _CHUNKS
         if not chunks:
             raise HTTPException(status_code=400, detail="ingest sources or provide corpus_path first")
         case = PatientCase.from_dict(payload)
-        result = MedReasonAnalyzer(chunks).analyze(case).to_dict()
+        result = MedReasonAnalyzer(
+            chunks,
+            evidence_extractor=evidence_extractor,
+            llm_command=llm_command,
+            llm_timeout_seconds=llm_timeout_seconds,
+            llm_fallback_to_deterministic=llm_fallback_to_deterministic,
+        ).analyze(case).to_dict()
         _CASES[case.case_id] = result
         return result
 

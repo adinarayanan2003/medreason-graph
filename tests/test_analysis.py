@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -200,6 +203,106 @@ class AnalysisTest(unittest.TestCase):
         self.assertTrue(claims)
         self.assertFalse(any(claim.claim_type == "rules_out" for claim in claims))
         self.assertFalse(any(claim.polarity == "argues_against" for claim in claims))
+
+    def test_llm_extractor_accepts_schema_valid_verbatim_span_claim(self) -> None:
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_test",
+                "patient": {},
+                "chief_complaint": "crushing chest pain",
+                "findings": [{"type": "symptom", "name": "diaphoresis", "status": "present"}],
+            }
+        )
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Guideline",
+            source_type="guideline",
+            section_path=["Guideline", "Symptoms"],
+            section_type="symptoms",
+            paragraph_index=1,
+            text="Diaphoresis supports acute coronary syndrome.",
+        )
+        hit = RetrievalHit(chunk=chunk, score=1.0, matched_terms=["diaphoresis"], score_parts={})
+
+        claims = extract_evidence_claims(
+            [hit],
+            case,
+            extractor="llm",
+            llm_command=_fake_llm_command(
+                {
+                    "claims": [
+                        {
+                            "claim_type": "supports",
+                            "condition": "acute coronary syndrome",
+                            "finding": "diaphoresis",
+                            "polarity": "supports",
+                            "strength": "moderate",
+                            "exact_quote": "Diaphoresis supports acute coronary syndrome.",
+                            "extraction_confidence": 0.91,
+                        }
+                    ]
+                }
+            ),
+        )
+
+        self.assertEqual(len(claims), 1)
+        self.assertEqual(claims[0].extraction_method, "llm_command_v1")
+        self.assertEqual(claims[0].extraction_confidence, 0.91)
+        self.assertEqual(validate_evidence_claim(claims[0], chunk.text), [])
+
+    def test_llm_extractor_rejects_non_verbatim_span_claim(self) -> None:
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_test",
+                "patient": {},
+                "chief_complaint": "chest pain",
+                "findings": [{"type": "symptom", "name": "chest pain", "status": "present"}],
+            }
+        )
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Guideline",
+            source_type="guideline",
+            section_path=["Guideline", "Symptoms"],
+            section_type="symptoms",
+            paragraph_index=1,
+            text="Chest pain can occur in acute coronary syndrome.",
+        )
+        hit = RetrievalHit(chunk=chunk, score=1.0, matched_terms=["chest", "pain"], score_parts={})
+
+        claims = extract_evidence_claims(
+            [hit],
+            case,
+            extractor="llm",
+            llm_command=_fake_llm_command(
+                {
+                    "claims": [
+                        {
+                            "claim_type": "supports",
+                            "condition": "acute coronary syndrome",
+                            "finding": "chest pain",
+                            "polarity": "supports",
+                            "strength": "moderate",
+                            "exact_quote": "This quote is not in the source.",
+                            "extraction_confidence": 0.99,
+                        }
+                    ]
+                }
+            ),
+        )
+
+        self.assertEqual(claims, [])
+
+def _fake_llm_command(response: dict) -> str:
+    temp = tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".py", delete=False)
+    script = Path(temp.name)
+    temp.write("import json, sys\n")
+    temp.write("_ = sys.stdin.read()\n")
+    temp.write(f"print(json.dumps({json.dumps(response)}))\n")
+    temp.close()
+    return f"{sys.executable} {script}"
 
 
 if __name__ == "__main__":

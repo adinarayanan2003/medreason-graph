@@ -25,9 +25,22 @@ logger = logging.getLogger(__name__)
 
 
 class MedReasonAnalyzer:
-    def __init__(self, chunks: list[SourceChunk], retriever: RetrievalBackend | None = None):
+    def __init__(
+        self,
+        chunks: list[SourceChunk],
+        retriever: RetrievalBackend | None = None,
+        *,
+        evidence_extractor: str = "deterministic",
+        llm_command: str | None = None,
+        llm_timeout_seconds: float = 60.0,
+        llm_fallback_to_deterministic: bool = False,
+    ):
         self.chunks = chunks
         self.retriever = retriever or HybridRetriever(chunks)
+        self.evidence_extractor = evidence_extractor
+        self.llm_command = llm_command
+        self.llm_timeout_seconds = llm_timeout_seconds
+        self.llm_fallback_to_deterministic = llm_fallback_to_deterministic
 
     def analyze(self, case: PatientCase | dict, top_k: int = 16) -> AnalysisResult:
         patient_case = case if isinstance(case, PatientCase) else PatientCase.from_dict(case)
@@ -36,7 +49,14 @@ class MedReasonAnalyzer:
         query = " | ".join(f"{part.label}:{part.text}" for part in query_parts)
         log_event(logger, "analysis_started", case_id=normalized_case.case_id, query=query, chunks=len(self.chunks))
         hits = self.retriever.fused_search(query_parts, top_k=top_k)
-        claims = extract_evidence_claims(hits, normalized_case)
+        claims = extract_evidence_claims(
+            hits,
+            normalized_case,
+            extractor=self.evidence_extractor,
+            llm_command=self.llm_command,
+            llm_timeout_seconds=self.llm_timeout_seconds,
+            llm_fallback_to_deterministic=self.llm_fallback_to_deterministic,
+        )
         dangerous_checked = _dangerous_alternatives(normalized_case)
         candidates = sorted(_candidate_conditions(claims, dangerous_checked))
         steps = _reasoning_steps(normalized_case, candidates, claims)
