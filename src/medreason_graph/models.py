@@ -171,6 +171,21 @@ class EvidenceClaim:
 
 
 @dataclass(frozen=True)
+class ClaimVerification:
+    claim_id: str
+    supported: bool
+    reasons: list[str]
+    verifier_method: str = "deterministic_claim_verifier_v1"
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ClaimVerification":
+        return cls(**data)
+
+
+@dataclass(frozen=True)
 class ReasoningStep:
     id: str
     condition: str
@@ -245,6 +260,7 @@ class AnalysisResult:
     reasoning_steps: list[ReasoningStep]
     graph: EvidenceGraph
     verifier: VerifierReport
+    claim_verifications: list[ClaimVerification] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -255,6 +271,7 @@ class AnalysisResult:
             "reasoning_steps": [step.to_dict() for step in self.reasoning_steps],
             "graph": self.graph.to_dict(),
             "verifier": self.verifier.to_dict(),
+            "claim_verifications": [verification.to_dict() for verification in self.claim_verifications],
         }
 
     @classmethod
@@ -267,4 +284,8 @@ class AnalysisResult:
             reasoning_steps=[ReasoningStep.from_dict(item) for item in data.get("reasoning_steps", [])],
             graph=EvidenceGraph.from_dict(data.get("graph", {})),
             verifier=VerifierReport.from_dict(data.get("verifier", {})),
+            claim_verifications=[
+                ClaimVerification.from_dict(item)
+                for item in data.get("claim_verifications", [])
+            ],
         )

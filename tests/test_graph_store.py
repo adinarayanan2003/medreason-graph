@@ -12,6 +12,7 @@ from medreason_graph.graph_store import (
     query_missing_tests,
     query_reasoning,
     query_source_spans,
+    query_verifier_failures,
 )
 from medreason_graph.ingestion import ingest_path
 from medreason_graph.models import PatientCase
@@ -53,6 +54,7 @@ class GraphStoreTest(unittest.TestCase):
             reasoning = query_reasoning(graph_path, condition="acute coronary syndrome")
             source_spans = query_source_spans(graph_path, condition="acute coronary syndrome")
             explanation = query_explain_rank(graph_path, condition="acute coronary syndrome")
+            failures = query_verifier_failures(graph_path)
 
         self.assertTrue(evidence_for)
         self.assertTrue(evidence_against)
@@ -62,6 +64,7 @@ class GraphStoreTest(unittest.TestCase):
         self.assertTrue(explanation["found"])
         self.assertEqual(explanation["condition"], "acute coronary syndrome")
         self.assertTrue(explanation["evidence_for"])
+        self.assertEqual(failures, [])
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ from medreason_graph.analyzer import MedReasonAnalyzer
 from medreason_graph.evidence import extract_evidence_claims, validate_evidence_claim
 from medreason_graph.ingestion import ingest_path
 from medreason_graph.models import PatientCase, ReasoningStep, RetrievalHit, SourceChunk
-from medreason_graph.verifier import verify_reasoning
+from medreason_graph.verifier import verify_evidence_claims, verify_reasoning
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -382,6 +382,97 @@ class AnalysisTest(unittest.TestCase):
         )
 
         self.assertEqual(claims, [])
+
+    def test_claim_verifier_rejects_differential_language_as_support(self) -> None:
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_test",
+                "patient": {},
+                "chief_complaint": "chest pain",
+                "findings": [{"type": "symptom", "name": "chest pain", "status": "present"}],
+            }
+        )
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Guideline",
+            source_type="guideline",
+            section_path=["Guideline", "Differential"],
+            section_type="differential",
+            paragraph_index=1,
+            text="Chest pain from pulmonary embolism needs to be differentiated from acute coronary syndrome.",
+        )
+        hit = RetrievalHit(chunk=chunk, score=1.0, matched_terms=["chest", "pain"], score_parts={})
+        claims = extract_evidence_claims(
+            [hit],
+            case,
+            extractor="llm",
+            llm_command=_fake_llm_command(
+                {
+                    "claims": [
+                        {
+                            "claim_type": "supports",
+                            "condition": "acute coronary syndrome",
+                            "finding": "chest pain",
+                            "polarity": "supports",
+                            "strength": "moderate",
+                            "exact_quote": "Chest pain from pulmonary embolism needs to be differentiated from acute coronary syndrome.",
+                            "extraction_confidence": 0.9,
+                        }
+                    ]
+                }
+            ),
+        )
+
+        verifications = verify_evidence_claims(claims)
+
+        self.assertEqual(len(verifications), 1)
+        self.assertFalse(verifications[0].supported)
+        self.assertIn("differential_language_not_support", verifications[0].reasons)
+
+    def test_analyzer_filters_failed_claims_before_reasoning(self) -> None:
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Guideline",
+            source_type="guideline",
+            section_path=["Guideline", "Differential"],
+            section_type="differential",
+            paragraph_index=1,
+            text="Chest pain from pulmonary embolism needs to be differentiated from acute coronary syndrome.",
+        )
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_test",
+                "patient": {},
+                "chief_complaint": "chest pain",
+                "findings": [{"type": "symptom", "name": "chest pain", "status": "present"}],
+            }
+        )
+
+        result = MedReasonAnalyzer(
+            [chunk],
+            evidence_extractor="llm",
+            llm_command=_fake_llm_command(
+                {
+                    "claims": [
+                        {
+                            "claim_type": "supports",
+                            "condition": "acute coronary syndrome",
+                            "finding": "chest pain",
+                            "polarity": "supports",
+                            "strength": "moderate",
+                            "exact_quote": "Chest pain from pulmonary embolism needs to be differentiated from acute coronary syndrome.",
+                            "extraction_confidence": 0.9,
+                        }
+                    ]
+                }
+            ),
+        ).analyze(case)
+
+        self.assertEqual(result.evidence_claims, [])
+        self.assertTrue(result.claim_verifications)
+        self.assertFalse(result.claim_verifications[0].supported)
 
 def _fake_llm_command(response: dict) -> str:
     temp = tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".py", delete=False)

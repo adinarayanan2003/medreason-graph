@@ -19,7 +19,7 @@ from medreason_graph.query import decompose_case_query
 from medreason_graph.retrieval_backend import RetrievalBackend
 from medreason_graph.retrieval import HybridRetriever
 from medreason_graph.text import canonicalize_term, detect_concepts
-from medreason_graph.verifier import verify_reasoning
+from medreason_graph.verifier import verify_evidence_claims, verify_reasoning
 
 logger = logging.getLogger(__name__)
 
@@ -57,17 +57,21 @@ class MedReasonAnalyzer:
             llm_timeout_seconds=self.llm_timeout_seconds,
             llm_fallback_to_deterministic=self.llm_fallback_to_deterministic,
         )
+        claim_verifications = verify_evidence_claims(claims)
+        supported_claim_ids = {verification.claim_id for verification in claim_verifications if verification.supported}
+        accepted_claims = [claim for claim in claims if claim.id in supported_claim_ids]
         dangerous_checked = _dangerous_alternatives(normalized_case)
-        candidates = sorted(_candidate_conditions(claims, dangerous_checked))
-        steps = _reasoning_steps(normalized_case, candidates, claims)
-        differential = _rank_differential(candidates, claims, steps, normalized_case)
-        graph = build_graph(normalized_case, claims, steps)
-        verifier = verify_reasoning(normalized_case, claims, steps, dangerous_checked)
+        candidates = sorted(_candidate_conditions(accepted_claims, dangerous_checked))
+        steps = _reasoning_steps(normalized_case, candidates, accepted_claims)
+        differential = _rank_differential(candidates, accepted_claims, steps, normalized_case)
+        graph = build_graph(normalized_case, accepted_claims, steps)
+        verifier = verify_reasoning(normalized_case, accepted_claims, steps, dangerous_checked)
         log_event(
             logger,
             "analysis_completed",
             case_id=normalized_case.case_id,
-            claims=len(claims),
+            claims=len(accepted_claims),
+            rejected_claims=len(claims) - len(accepted_claims),
             reasoning_steps=len(steps),
             differential_items=len(differential),
             verifier_passed=verifier.passed,
@@ -76,10 +80,11 @@ class MedReasonAnalyzer:
             case_id=normalized_case.case_id,
             problem_representation=_problem_representation(normalized_case),
             differential=differential,
-            evidence_claims=claims,
+            evidence_claims=accepted_claims,
             reasoning_steps=steps,
             graph=graph,
             verifier=verifier,
+            claim_verifications=claim_verifications,
         )
 
 

@@ -17,6 +17,7 @@ from medreason_graph.graph_store import (
     query_missing_tests,
     query_reasoning,
     query_source_spans,
+    query_verifier_failures,
 )
 from medreason_graph.ingestion import ingest_path
 from medreason_graph.logging_utils import configure_logging
@@ -119,10 +120,18 @@ def main() -> int:
     graph_query = subparsers.add_parser("graph-query", help="Query a persisted SQLite evidence graph.")
     graph_query.add_argument(
         "query",
-        choices=("evidence-for", "evidence-against", "missing-tests", "reasoning", "source-spans", "explain-rank"),
+        choices=(
+            "evidence-for",
+            "evidence-against",
+            "missing-tests",
+            "reasoning",
+            "source-spans",
+            "explain-rank",
+            "verifier-failures",
+        ),
     )
     graph_query.add_argument("--graph", required=True)
-    graph_query.add_argument("--condition", required=True)
+    graph_query.add_argument("--condition")
     graph_query.add_argument("--verbose", action="store_true")
 
     args = parser.parse_args()
@@ -197,6 +206,8 @@ def main() -> int:
         return 0
 
     if args.command == "graph-query":
+        if args.query != "verifier-failures" and not args.condition:
+            raise SystemExit("--condition is required for this graph query")
         if args.query == "evidence-for":
             output = query_evidence(args.graph, condition=args.condition, polarity="supports")
         elif args.query == "evidence-against":
@@ -207,6 +218,8 @@ def main() -> int:
             output = query_reasoning(args.graph, condition=args.condition)
         elif args.query == "source-spans":
             output = query_source_spans(args.graph, condition=args.condition)
+        elif args.query == "verifier-failures":
+            output = query_verifier_failures(args.graph)
         else:
             output = query_explain_rank(args.graph, condition=args.condition)
         print(json.dumps(output, indent=2))

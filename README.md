@@ -93,6 +93,7 @@ medreason-graph graph-query evidence-against --graph data/graphs/case.sqlite --c
 medreason-graph graph-query missing-tests --graph data/graphs/case.sqlite --condition "pulmonary embolism"
 medreason-graph graph-query source-spans --graph data/graphs/case.sqlite --condition "acute coronary syndrome"
 medreason-graph graph-query explain-rank --graph data/graphs/case.sqlite --condition "acute coronary syndrome"
+medreason-graph graph-query verifier-failures --graph data/graphs/case.sqlite
 ```
 
 `ingest` supports Markdown, TXT, JSON, HTML, DOCX, and PDF. PDF extraction requires the optional `corpus` dependency.
@@ -228,7 +229,10 @@ Query the persisted graph without re-running retrieval or the LLM:
 medreason-graph graph-query evidence-for --graph /tmp/chest_pain_graph.sqlite --condition "acute coronary syndrome"
 medreason-graph graph-query reasoning --graph /tmp/chest_pain_graph.sqlite --condition "acute coronary syndrome"
 medreason-graph graph-query explain-rank --graph /tmp/chest_pain_graph.sqlite --condition "acute coronary syndrome"
+medreason-graph graph-query verifier-failures --graph /tmp/chest_pain_graph.sqlite
 ```
+
+The analyzer runs claim-level verification before ranking. Claims that fail source-span entailment checks are kept in `claim_verifications` for audit, but are not allowed to support differential ranking or reasoning steps.
 
 ## Configuration
 

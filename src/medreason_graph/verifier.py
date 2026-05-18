@@ -1,8 +1,88 @@
 from __future__ import annotations
 
 from medreason_graph.lexicon import DANGEROUS_ALTERNATIVES
-from medreason_graph.models import EvidenceClaim, PatientCase, ReasoningStep, VerifierReport
-from medreason_graph.text import canonicalize_term, detect_concepts
+from medreason_graph.lexicon import CONCEPTS
+from medreason_graph.models import ClaimVerification, EvidenceClaim, PatientCase, ReasoningStep, VerifierReport
+from medreason_graph.text import canonicalize_term, detect_concepts, normalize, phrase_in_text
+
+CLAIM_VERIFIER_METHOD = "deterministic_claim_verifier_v1"
+DIFFERENTIAL_ONLY_CUES = (
+    "differential diagnosis",
+    "differential includes",
+    "differential should include",
+    "differentiate between",
+    "differentiate from",
+    "differentiated from",
+    "distinguish from",
+    "other potential causes",
+    "other conditions such as",
+)
+NON_RULE_OUT_CUES = (
+    "does not rule out",
+    "do not rule out",
+    "doesn't rule out",
+    "cannot rule out",
+    "can not rule out",
+    "does not exclude",
+    "do not exclude",
+    "cannot exclude",
+    "can not exclude",
+    "should not exclude",
+)
+TEST_CUES = ("obtain", "measure", "test", "evaluate", "initial evaluation", "serial", "perform", "imaging")
+RED_FLAG_CUES = ("red flag", "emergent", "emergency", "urgent", "dangerous", "high risk", "concerning")
+
+
+def verify_evidence_claims(claims: list[EvidenceClaim]) -> list[ClaimVerification]:
+    return [_verify_evidence_claim(claim) for claim in claims]
+
+
+def _verify_evidence_claim(claim: EvidenceClaim) -> ClaimVerification:
+    reasons: list[str] = []
+    sentence = claim.sentence
+    lowered = normalize(sentence)
+    sentence_conditions = detect_concepts(sentence, kind="condition")
+    sentence_concepts = detect_concepts(sentence)
+
+    if claim.condition not in sentence_conditions and not phrase_in_text(claim.condition, sentence):
+        reasons.append("condition_not_in_source_span")
+
+    if claim.finding and claim.polarity != "recommends":
+        if claim.finding not in sentence_concepts and not phrase_in_text(claim.finding, sentence):
+            reasons.append("finding_not_in_source_span")
+
+    if claim.polarity == "supports" and any(cue in lowered for cue in DIFFERENTIAL_ONLY_CUES):
+        reasons.append("differential_language_not_support")
+
+    if claim.polarity == "argues_against" and any(cue in lowered for cue in NON_RULE_OUT_CUES):
+        reasons.append("negated_rule_out_misread")
+
+    if claim.claim_type == "rules_out" and any(cue in lowered for cue in NON_RULE_OUT_CUES):
+        reasons.append("negated_rule_out_misread")
+
+    if claim.claim_type == "requires_test" or claim.polarity == "recommends":
+        if not claim.finding or not _is_test_concept(claim.finding):
+            reasons.append("recommended_item_not_test")
+        if not any(cue in lowered for cue in TEST_CUES):
+            reasons.append("missing_test_recommendation_language")
+
+    if claim.claim_type == "red_flag" and not any(cue in lowered for cue in RED_FLAG_CUES):
+        reasons.append("missing_red_flag_language")
+
+    if claim.claim_type == "treatment_recommends":
+        reasons.append("treatment_recommendations_not_enabled")
+
+    return ClaimVerification(
+        claim_id=claim.id,
+        supported=not reasons,
+        reasons=sorted(set(reasons)),
+        verifier_method=CLAIM_VERIFIER_METHOD,
+    )
+
+
+def _is_test_concept(value: str) -> bool:
+    concept = CONCEPTS.get(value)
+    return concept is not None and concept.kind == "test"
 
 
 def verify_reasoning(

@@ -169,8 +169,12 @@ Acceptance:
 
 ## Stage 7: Reasoning and Verifier Upgrade
 
+Status: in progress; Stage 7A complete.
+
 Goal: enforce valid, auditable reasoning instead of generating plausible explanations.
 
+- Stage 7A completed:
+  deterministic claim-level entailment verification, failed-claim filtering before ranking/reasoning, persisted claim verification status, and graph query support for verifier failures.
 - Keep visible reasoning structured, not hidden chain-of-thought.
 - Add a reasoning planner that builds:
   `problem representation`, `evidence for`, `evidence against`, `missing evidence`, `dangerous misses`, `next questions/tests`.

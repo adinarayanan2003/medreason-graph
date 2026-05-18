@@ -126,6 +126,29 @@ def query_explain_rank(path: str | Path, *, condition: str) -> dict[str, Any]:
     }
 
 
+def query_verifier_failures(path: str | Path) -> list[dict[str, Any]]:
+    with sqlite3.connect(path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT v.claim_id, v.supported, v.reasons_json, v.verifier_method,
+                   c.claim_type, c.condition, c.finding, c.polarity, c.sentence,
+                   c.source_title, c.source_span_start, c.source_span_end
+            FROM claim_verifications v
+            LEFT JOIN evidence_claims c ON c.id = v.claim_id
+            WHERE v.supported = 0
+            ORDER BY v.claim_id
+            """
+        ).fetchall()
+    result = []
+    for row in rows:
+        item = dict(row)
+        item["reasons"] = json.loads(item.pop("reasons_json"))
+        item["supported"] = bool(item["supported"])
+        result.append(item)
+    return result
+
+
 def _init_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(
         """
@@ -186,6 +209,15 @@ def _init_schema(conn: sqlite3.Connection) -> None:
           FOREIGN KEY (case_id) REFERENCES cases(case_id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS claim_verifications (
+          claim_id TEXT PRIMARY KEY,
+          case_id TEXT NOT NULL,
+          supported INTEGER NOT NULL,
+          reasons_json TEXT NOT NULL,
+          verifier_method TEXT NOT NULL,
+          FOREIGN KEY (case_id) REFERENCES cases(case_id) ON DELETE CASCADE
+        );
+
         CREATE TABLE IF NOT EXISTS reasoning_steps (
           id TEXT PRIMARY KEY,
           case_id TEXT NOT NULL,
@@ -225,6 +257,8 @@ def _init_schema(conn: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS idx_evidence_condition_polarity
           ON evidence_claims(condition, polarity);
+        CREATE INDEX IF NOT EXISTS idx_claim_verifications_supported
+          ON claim_verifications(supported);
         CREATE INDEX IF NOT EXISTS idx_reasoning_condition
           ON reasoning_steps(condition);
         """
@@ -300,6 +334,20 @@ def _insert_result(conn: sqlite3.Connection, result: AnalysisResult) -> None:
                 claim.extraction_confidence,
                 claim.extraction_method,
                 claim.schema_version,
+            ),
+        )
+    for verification in result.claim_verifications:
+        conn.execute(
+            """
+            INSERT INTO claim_verifications(claim_id, case_id, supported, reasons_json, verifier_method)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                verification.claim_id,
+                result.case_id,
+                1 if verification.supported else 0,
+                json.dumps(verification.reasons),
+                verification.verifier_method,
             ),
         )
     for step in result.reasoning_steps:
