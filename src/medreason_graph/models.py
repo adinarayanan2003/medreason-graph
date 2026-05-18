@@ -165,6 +165,10 @@ class EvidenceClaim:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "EvidenceClaim":
+        return cls(**data)
+
 
 @dataclass(frozen=True)
 class ReasoningStep:
@@ -177,6 +181,10 @@ class ReasoningStep:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ReasoningStep":
+        return cls(**data)
 
 
 @dataclass(frozen=True)
@@ -194,6 +202,10 @@ class DifferentialItem:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "DifferentialItem":
+        return cls(**data)
+
 
 @dataclass(frozen=True)
 class EvidenceGraph:
@@ -202,6 +214,10 @@ class EvidenceGraph:
 
     def to_dict(self) -> dict[str, Any]:
         return {"nodes": self.nodes, "edges": self.edges}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "EvidenceGraph":
+        return cls(nodes=data.get("nodes", []), edges=data.get("edges", []))
 
 
 @dataclass(frozen=True)
@@ -214,6 +230,10 @@ class VerifierReport:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "VerifierReport":
+        return cls(**data)
 
 
 @dataclass(frozen=True)
@@ -236,3 +256,15 @@ class AnalysisResult:
             "graph": self.graph.to_dict(),
             "verifier": self.verifier.to_dict(),
         }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "AnalysisResult":
+        return cls(
+            case_id=data["case_id"],
+            problem_representation=data.get("problem_representation", ""),
+            differential=[DifferentialItem.from_dict(item) for item in data.get("differential", [])],
+            evidence_claims=[EvidenceClaim.from_dict(item) for item in data.get("evidence_claims", [])],
+            reasoning_steps=[ReasoningStep.from_dict(item) for item in data.get("reasoning_steps", [])],
+            graph=EvidenceGraph.from_dict(data.get("graph", {})),
+            verifier=VerifierReport.from_dict(data.get("verifier", {})),
+        )

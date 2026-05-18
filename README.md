@@ -87,6 +87,12 @@ medreason-graph evaluate-retrieval --corpus data/open_corpus/open_medical_corpus
 medreason-graph evaluate-retrieval --corpus data/open_corpus/open_medical_corpus.json --retriever sqlite --index data/open_corpus/open_medical_corpus.sqlite
 medreason-graph evaluate-retrieval --corpus data/open_corpus/open_medical_corpus.json --retriever faiss --index data/open_corpus/open_medical_corpus.faiss
 medreason-graph evaluate-retrieval --corpus data/open_corpus/open_medical_corpus.json --retriever faiss --index data/open_corpus/open_medical_corpus_medcpt.faiss
+medreason-graph graph-store-build --analysis analysis.json --out data/graphs/case.sqlite
+medreason-graph graph-query evidence-for --graph data/graphs/case.sqlite --condition "acute coronary syndrome"
+medreason-graph graph-query evidence-against --graph data/graphs/case.sqlite --condition "gastroesophageal reflux disease"
+medreason-graph graph-query missing-tests --graph data/graphs/case.sqlite --condition "pulmonary embolism"
+medreason-graph graph-query source-spans --graph data/graphs/case.sqlite --condition "acute coronary syndrome"
+medreason-graph graph-query explain-rank --graph data/graphs/case.sqlite --condition "acute coronary syndrome"
 ```
 
 `ingest` supports Markdown, TXT, JSON, HTML, DOCX, and PDF. PDF extraction requires the optional `corpus` dependency.
@@ -199,6 +205,29 @@ The included [scripts/openai_claim_extractor.py](scripts/openai_claim_extractor.
 
 ```bash
 OPENAI_MODEL=gpt-4.1-mini
+```
+
+## Graph Store
+
+Persist an analysis result into a queryable SQLite evidence graph:
+
+```bash
+medreason-graph analyze \
+  --corpus /tmp/medreason_corpus.json \
+  --case examples/cases/chest_pain.json \
+  --json > /tmp/chest_pain_analysis.json
+
+medreason-graph graph-store-build \
+  --analysis /tmp/chest_pain_analysis.json \
+  --out /tmp/chest_pain_graph.sqlite
+```
+
+Query the persisted graph without re-running retrieval or the LLM:
+
+```bash
+medreason-graph graph-query evidence-for --graph /tmp/chest_pain_graph.sqlite --condition "acute coronary syndrome"
+medreason-graph graph-query reasoning --graph /tmp/chest_pain_graph.sqlite --condition "acute coronary syndrome"
+medreason-graph graph-query explain-rank --graph /tmp/chest_pain_graph.sqlite --condition "acute coronary syndrome"
 ```
 
 ## Configuration

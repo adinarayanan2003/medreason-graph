@@ -147,12 +147,16 @@ Acceptance:
 
 ## Stage 6: Evidence Graph Engine
 
+Status: in progress; Stage 6A and 6B complete.
+
 Goal: make the graph a first-class reasoning layer, not just an export.
 
-- Store graph in Neo4j, Kuzu, SQLite tables, or PostgreSQL relational tables.
-- Add graph queries for:
-  `find evidence for condition`, `find evidence against condition`, `find missing tests`, `find dangerous alternatives`.
-- Add provenance edges from every reasoning step to evidence claims and source passages.
+- Stage 6A completed:
+  SQLite graph store for analysis cases, differential items, missing evidence, evidence claims, reasoning steps, reasoning-evidence links, graph nodes, graph edges, and verifier status.
+- Stage 6B completed:
+  CLI query layer for `evidence-for`, `evidence-against`, `missing-tests`, `reasoning`, `source-spans`, and `explain-rank`.
+- Add graph queries for dangerous alternatives and cross-case/corpus-level evidence.
+- Add richer provenance queries from every reasoning step to evidence claims and source passages.
 - Add conflict representation when sources disagree.
 - Add source quality and date weighting directly into graph queries.
 - Add graph diffing when corpus versions change.

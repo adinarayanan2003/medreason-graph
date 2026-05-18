@@ -9,6 +9,15 @@ from medreason_graph.config import load_and_apply_config
 from medreason_graph.evaluation import evaluate_retrieval
 from medreason_graph.faiss_retrieval import FAISSRetriever, build_faiss_index
 from medreason_graph.graph import export_cytoscape, export_graphviz_dot, graph_to_json
+from medreason_graph.graph_store import (
+    build_graph_store,
+    load_analysis_result,
+    query_evidence,
+    query_explain_rank,
+    query_missing_tests,
+    query_reasoning,
+    query_source_spans,
+)
 from medreason_graph.ingestion import ingest_path
 from medreason_graph.logging_utils import configure_logging
 from medreason_graph.models import PatientCase
@@ -102,6 +111,20 @@ def main() -> int:
     search_index.add_argument("--top-k", type=int, default=5)
     search_index.add_argument("--verbose", action="store_true")
 
+    graph_store_build = subparsers.add_parser("graph-store-build", help="Persist an analysis result into a SQLite graph store.")
+    graph_store_build.add_argument("--analysis", required=True)
+    graph_store_build.add_argument("--out", required=True)
+    graph_store_build.add_argument("--verbose", action="store_true")
+
+    graph_query = subparsers.add_parser("graph-query", help="Query a persisted SQLite evidence graph.")
+    graph_query.add_argument(
+        "query",
+        choices=("evidence-for", "evidence-against", "missing-tests", "reasoning", "source-spans", "explain-rank"),
+    )
+    graph_query.add_argument("--graph", required=True)
+    graph_query.add_argument("--condition", required=True)
+    graph_query.add_argument("--verbose", action="store_true")
+
     args = parser.parse_args()
     configure_logging(verbose=getattr(args, "verbose", False))
     if getattr(args, "config", None):
@@ -165,6 +188,28 @@ def main() -> int:
         )
         print(json.dumps([hit.to_dict() for hit in hits], indent=2))
         retriever.close()
+        return 0
+
+    if args.command == "graph-store-build":
+        result = load_analysis_result(args.analysis)
+        build_graph_store(result, args.out)
+        print(f"Stored analysis graph for {result.case_id} at {args.out}")
+        return 0
+
+    if args.command == "graph-query":
+        if args.query == "evidence-for":
+            output = query_evidence(args.graph, condition=args.condition, polarity="supports")
+        elif args.query == "evidence-against":
+            output = query_evidence(args.graph, condition=args.condition, polarity="argues_against")
+        elif args.query == "missing-tests":
+            output = query_missing_tests(args.graph, condition=args.condition)
+        elif args.query == "reasoning":
+            output = query_reasoning(args.graph, condition=args.condition)
+        elif args.query == "source-spans":
+            output = query_source_spans(args.graph, condition=args.condition)
+        else:
+            output = query_explain_rank(args.graph, condition=args.condition)
+        print(json.dumps(output, indent=2))
         return 0
 
     if args.command == "ingest":
