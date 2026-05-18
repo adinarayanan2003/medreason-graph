@@ -295,6 +295,94 @@ class AnalysisTest(unittest.TestCase):
 
         self.assertEqual(claims, [])
 
+    def test_llm_extractor_rejects_support_claim_not_grounded_in_patient_facts(self) -> None:
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_test",
+                "patient": {},
+                "chief_complaint": "chest pain",
+                "findings": [{"type": "symptom", "name": "chest pain", "status": "present"}],
+            }
+        )
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Guideline",
+            source_type="guideline",
+            section_path=["Guideline", "Symptoms"],
+            section_type="symptoms",
+            paragraph_index=1,
+            text="Pleuritic pain and sudden dyspnea support considering pulmonary embolism.",
+        )
+        hit = RetrievalHit(chunk=chunk, score=1.0, matched_terms=["chest", "pain"], score_parts={})
+
+        claims = extract_evidence_claims(
+            [hit],
+            case,
+            extractor="llm",
+            llm_command=_fake_llm_command(
+                {
+                    "claims": [
+                        {
+                            "claim_type": "supports",
+                            "condition": "pulmonary embolism",
+                            "finding": "dyspnea",
+                            "polarity": "supports",
+                            "strength": "moderate",
+                            "exact_quote": "Pleuritic pain and sudden dyspnea support considering pulmonary embolism.",
+                            "extraction_confidence": 0.9,
+                        }
+                    ]
+                }
+            ),
+        )
+
+        self.assertEqual(claims, [])
+
+    def test_llm_extractor_rejects_rules_out_when_quote_says_does_not_exclude(self) -> None:
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_test",
+                "patient": {},
+                "chief_complaint": "chest pain",
+                "findings": [{"type": "test", "name": "ECG", "status": "present"}],
+            }
+        )
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Guideline",
+            source_type="guideline",
+            section_path=["Guideline", "Tests"],
+            section_type="tests",
+            paragraph_index=1,
+            text="A normal initial test does not exclude acute coronary syndrome when symptoms remain concerning.",
+        )
+        hit = RetrievalHit(chunk=chunk, score=1.0, matched_terms=["ecg"], score_parts={})
+
+        claims = extract_evidence_claims(
+            [hit],
+            case,
+            extractor="llm",
+            llm_command=_fake_llm_command(
+                {
+                    "claims": [
+                        {
+                            "claim_type": "rules_out",
+                            "condition": "acute coronary syndrome",
+                            "finding": "normal initial test",
+                            "polarity": "argues_against",
+                            "strength": "weak",
+                            "exact_quote": "A normal initial test does not exclude acute coronary syndrome when symptoms remain concerning.",
+                            "extraction_confidence": 0.9,
+                        }
+                    ]
+                }
+            ),
+        )
+
+        self.assertEqual(claims, [])
+
 def _fake_llm_command(response: dict) -> str:
     temp = tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".py", delete=False)
     script = Path(temp.name)

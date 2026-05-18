@@ -173,6 +173,12 @@ def extract_llm_evidence_claims(
             if claim is None:
                 log_event(logger, "llm_claim_rejected", chunk_id=hit.chunk.id, reason="unusable_span_or_fields")
                 continue
+            if _llm_claim_contradicts_span_semantics(claim):
+                log_event(logger, "llm_claim_rejected", chunk_id=hit.chunk.id, claim_id=claim.id, reason="span_semantics")
+                continue
+            if not _llm_claim_relevant_to_case(claim, case):
+                log_event(logger, "llm_claim_rejected", chunk_id=hit.chunk.id, claim_id=claim.id, reason="not_patient_grounded")
+                continue
             errors = validate_evidence_claim(claim, hit.chunk.text)
             if errors:
                 log_event(logger, "llm_claim_rejected", chunk_id=hit.chunk.id, claim_id=claim.id, errors=errors)
@@ -290,6 +296,8 @@ def _claim_from_llm_item(item: dict[str, Any], chunk: SourceChunk) -> EvidenceCl
     finding_raw = item.get("finding") or item.get("finding_or_test") or item.get("test") or item.get("intervention")
     finding = _canonical_or_raw(str(finding_raw), kind=None) if finding_raw else None
     polarity = _normalize_polarity(str(item.get("polarity", "")), claim_type)
+    if polarity == "recommends" and finding and _is_test_concept(finding):
+        claim_type = "requires_test"
     strength = _normalize_strength(str(item.get("strength", "")))
     confidence = _normalize_confidence(item.get("extraction_confidence", item.get("confidence", 0.5)))
     claim_id = _claim_id(condition, finding or "", polarity, chunk.id, sentence)
@@ -344,6 +352,27 @@ def _normalize_claim_type(value: str) -> str:
     normalized = aliases.get(normalized, normalized)
     allowed = EVIDENCE_CLAIM_SCHEMA["properties"]["claim_type"]["enum"]
     return normalized if normalized in allowed else ""
+
+
+def _llm_claim_contradicts_span_semantics(claim: EvidenceClaim) -> bool:
+    if claim.polarity != "argues_against" and claim.claim_type != "rules_out":
+        return False
+    lowered = normalize(claim.sentence)
+    return any(cue in lowered for cue in NON_RULE_OUT_CUES)
+
+
+def _llm_claim_relevant_to_case(claim: EvidenceClaim, case: PatientCase) -> bool:
+    if claim.polarity == "recommends" or claim.claim_type in {"requires_test", "treatment_recommends"}:
+        return claim.finding is not None and _is_test_concept(claim.finding)
+    if not claim.finding:
+        return False
+    patient_concepts = _case_concepts_by_status(case)
+    return claim.finding in patient_concepts["present"]
+
+
+def _is_test_concept(value: str) -> bool:
+    concept = CONCEPTS.get(value)
+    return concept is not None and concept.kind == "test"
 
 
 def _normalize_polarity(value: str, claim_type: str) -> str:
