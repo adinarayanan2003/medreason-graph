@@ -18,6 +18,7 @@ api = ["fastapi>=0.110", "uvicorn>=0.27"]
 corpus = ["pypdf>=4"]
 vector = ["faiss-cpu>=1.8", "numpy>=1.25"]
 medical-encoders = ["faiss-cpu>=1.8", "numpy>=1.25", "torch>=2.2", "transformers>=4.40"]
+llm-openai = ["openai>=1.99"]
 dev = ["pypdf>=4", "faiss-cpu>=1.8", "numpy>=1.25"]
 
 [project.scripts]

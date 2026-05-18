@@ -46,6 +46,12 @@ For medical transformer encoders such as MedCPT, SapBERT, or BioClinicalBERT:
 pip install -e ".[medical-encoders]"
 ```
 
+For the OpenAI evidence-claim extractor adapter:
+
+```bash
+pip install -e ".[llm-openai]"
+```
+
 Or use the task runner:
 
 ```bash
@@ -165,7 +171,7 @@ medreason-graph analyze \
   --corpus data/open_corpus/open_medical_corpus.json \
   --case examples/cases/chest_pain.json \
   --evidence-extractor llm \
-  --llm-command "python path/to/extractor_adapter.py" \
+  --llm-command ".venv/bin/python scripts/openai_claim_extractor.py" \
   --llm-fallback-to-deterministic
 ```
 
@@ -188,6 +194,12 @@ The command receives a JSON payload on stdin with the patient case, retrieved so
 ```
 
 The validator accepts only claims whose quote or offsets match the retrieved source text exactly.
+
+The included [scripts/openai_claim_extractor.py](scripts/openai_claim_extractor.py) adapter reads `OPENAI_API_KEY` from `.env` or the process environment. You can override the model with:
+
+```bash
+OPENAI_MODEL=gpt-4.1-mini
+```
 
 ## Configuration
 
