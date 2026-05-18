@@ -3,6 +3,54 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+EVIDENCE_CLAIM_SCHEMA: dict[str, Any] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "EvidenceClaim",
+    "type": "object",
+    "required": [
+        "id",
+        "claim_type",
+        "condition",
+        "polarity",
+        "source_id",
+        "source_span_start",
+        "source_span_end",
+        "source_text_hash",
+        "sentence",
+        "extraction_confidence",
+        "extraction_method",
+    ],
+    "properties": {
+        "schema_version": {"const": "evidence_claim.v1"},
+        "id": {"type": "string"},
+        "claim_type": {
+            "type": "string",
+            "enum": [
+                "supports",
+                "argues_against",
+                "requires_test",
+                "rules_in",
+                "rules_out",
+                "contraindicates",
+                "red_flag",
+                "treatment_recommends",
+            ],
+        },
+        "condition": {"type": "string"},
+        "finding": {"type": ["string", "null"]},
+        "polarity": {"type": "string", "enum": ["supports", "argues_against", "recommends"]},
+        "strength": {"type": "string", "enum": ["strong", "moderate", "weak"]},
+        "source_id": {"type": "string"},
+        "source_span_start": {"type": "integer", "minimum": 0},
+        "source_span_end": {"type": "integer", "minimum": 1},
+        "source_text_hash": {"type": "string"},
+        "sentence": {"type": "string"},
+        "extraction_confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "extraction_method": {"type": "string"},
+    },
+    "additionalProperties": True,
+}
+
 
 @dataclass(frozen=True)
 class SourceChunk:
@@ -107,6 +155,12 @@ class EvidenceClaim:
     section_path: list[str]
     paragraph_index: int
     sentence: str
+    source_span_start: int = -1
+    source_span_end: int = -1
+    source_text_hash: str = ""
+    extraction_confidence: float = 0.0
+    extraction_method: str = "unknown"
+    schema_version: str = "evidence_claim.v1"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

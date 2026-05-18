@@ -45,6 +45,16 @@ def sentences(text: str) -> list[str]:
     return [part.strip() for part in parts if part.strip()]
 
 
+def sentence_spans(text: str) -> list[tuple[str, int, int]]:
+    spans: list[tuple[str, int, int]] = []
+    start = 0
+    for match in SENTENCE_RE.finditer(text):
+        _append_trimmed_span(spans, text, start, match.start())
+        start = match.end()
+    _append_trimmed_span(spans, text, start, len(text))
+    return spans
+
+
 def term_frequency(tokens: Iterable[str]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for token in tokens:
@@ -131,3 +141,12 @@ def _resolve_ambiguous_abbreviation(abbreviation: str, context: str) -> str | No
         if any(phrase_in_text(cue, context) for cue in cues):
             return candidate
     return None
+
+
+def _append_trimmed_span(spans: list[tuple[str, int, int]], text: str, start: int, end: int) -> None:
+    while start < end and text[start].isspace():
+        start += 1
+    while end > start and text[end - 1].isspace():
+        end -= 1
+    if start < end:
+        spans.append((text[start:end], start, end))

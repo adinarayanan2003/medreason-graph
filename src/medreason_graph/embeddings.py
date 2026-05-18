@@ -39,7 +39,12 @@ class EmbeddingConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "EmbeddingConfig":
+    def from_dict(cls, data: dict[str, Any] | str) -> "EmbeddingConfig":
+        if isinstance(data, str):
+            if data in {"hash", "hashing-v1"}:
+                data = {"backend": data, "preset": "hash", "dim": DEFAULT_EMBED_DIM}
+            else:
+                raise ValueError(f"unsupported embedding metadata: {data}")
         return cls(
             backend=data.get("backend", data.get("embedding", "hashing-v1")),
             preset=data.get("preset", "hash"),

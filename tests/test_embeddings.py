@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from medreason_graph.embeddings import resolve_embedding_config
+from medreason_graph.embeddings import DEFAULT_EMBED_DIM, EmbeddingConfig, resolve_embedding_config
 
 
 class EmbeddingPresetTest(unittest.TestCase):
@@ -36,7 +36,13 @@ class EmbeddingPresetTest(unittest.TestCase):
         self.assertEqual(config.query_pooling, "mean")
         self.assertEqual(config.document_max_length, 128)
 
+    def test_legacy_hashing_embedding_metadata_still_loads(self) -> None:
+        config = EmbeddingConfig.from_dict("hashing-v1")
+
+        self.assertEqual(config.backend, "hashing-v1")
+        self.assertEqual(config.preset, "hash")
+        self.assertEqual(config.dim, DEFAULT_EMBED_DIM)
+
 
 if __name__ == "__main__":
     unittest.main()
-

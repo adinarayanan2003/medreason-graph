@@ -29,8 +29,25 @@ def build_graph(case: PatientCase, claims: list[EvidenceClaim], steps: list[Reas
 
     for claim in claims:
         add_node(f"condition:{claim.condition}", "Condition", claim.condition)
-        add_node(f"evidence:{claim.id}", "EvidenceClaim", claim.id, polarity=claim.polarity, strength=claim.strength)
-        add_node(f"source:{claim.source_id}", "SourcePassage", claim.source_title, section_path=claim.section_path)
+        add_node(
+            f"evidence:{claim.id}",
+            "EvidenceClaim",
+            claim.id,
+            claim_type=claim.claim_type,
+            polarity=claim.polarity,
+            strength=claim.strength,
+            extraction_confidence=claim.extraction_confidence,
+            extraction_method=claim.extraction_method,
+        )
+        add_node(
+            f"source:{claim.source_id}",
+            "SourcePassage",
+            claim.source_title,
+            section_path=claim.section_path,
+            span_start=claim.source_span_start,
+            span_end=claim.source_span_end,
+            source_text_hash=claim.source_text_hash,
+        )
         if claim.finding:
             add_node(f"concept:{claim.finding}", "MedicalConcept", claim.finding)
             edges.append({"source": f"evidence:{claim.id}", "type": "about_finding", "target": f"concept:{claim.finding}"})

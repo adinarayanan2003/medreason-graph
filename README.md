@@ -146,6 +146,18 @@ Available presets:
 
 `--verbose` writes structured JSON logs to stderr for ingestion, retrieval, evidence extraction, and analysis events.
 
+## Evidence Claims
+
+Retrieved passages are converted into structured `EvidenceClaim` records before they can affect ranking or reasoning. Each accepted claim carries:
+
+- a strict schema version and claim type;
+- source span start/end offsets into the original chunk text;
+- a source-text hash;
+- extraction confidence;
+- extraction method.
+
+The deterministic extractor currently handles `supports`, `argues_against`, `requires_test`, `rules_out`, and `red_flag` claim types. Spanless or schema-invalid claims are rejected before graph construction.
+
 ## Configuration
 
 Clinical dictionaries and weights live in [config/default_clinical_config.json](config/default_clinical_config.json).
