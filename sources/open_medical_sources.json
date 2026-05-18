@@ -1,0 +1,47 @@
+{
+  "name": "open-medical-seed-corpus",
+  "description": "Allowlisted official/open medical sources for MedReason Graph development.",
+  "sources": [
+    {
+      "id": "ncbi_statpearls_myocardial_infarction",
+      "title": "Myocardial Infarction - StatPearls",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK537076/?report=printable",
+      "file_name": "ncbi_statpearls_myocardial_infarction.html",
+      "source_type": "textbook",
+      "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
+      "provider": "NCBI Bookshelf",
+      "format": "html"
+    },
+    {
+      "id": "ncbi_statpearls_acute_pulmonary_embolism",
+      "title": "Acute Pulmonary Embolism - StatPearls",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK560551/?report=printable",
+      "file_name": "ncbi_statpearls_acute_pulmonary_embolism.html",
+      "source_type": "textbook",
+      "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
+      "provider": "NCBI Bookshelf",
+      "format": "html"
+    },
+    {
+      "id": "ncbi_statpearls_aortic_dissection",
+      "title": "Aortic Dissection - StatPearls",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK441963/?report=printable",
+      "file_name": "ncbi_statpearls_aortic_dissection.html",
+      "source_type": "textbook",
+      "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
+      "provider": "NCBI Bookshelf",
+      "format": "html"
+    },
+    {
+      "id": "nhlbi_heart_attack_wallet_card",
+      "title": "Heart Attack Wallet Card",
+      "url": "https://www.nhlbi.nih.gov/sites/default/files/publications/Heart%20Attack%20Wallet%20Card_Nov%202020_Final%20PDF.pdf",
+      "file_name": "nhlbi_heart_attack_wallet_card.pdf",
+      "source_type": "guideline",
+      "license": "Official NIH/NHLBI public health publication",
+      "provider": "NHLBI",
+      "format": "pdf"
+    }
+  ]
+}
+

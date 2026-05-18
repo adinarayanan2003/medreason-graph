@@ -1,0 +1,21 @@
+{
+  "case_id": "case_chest_pain_001",
+  "verifier_passed": true,
+  "top_differential": [
+    "acute coronary syndrome",
+    "aortic dissection",
+    "pulmonary embolism"
+  ],
+  "dangerous_misses_checked": [
+    "acute coronary syndrome",
+    "aortic dissection",
+    "pulmonary embolism"
+  ],
+  "top_missing_evidence": [
+    "ecg",
+    "troponin"
+  ],
+  "minimum_reasoning_steps": 10,
+  "minimum_evidence_claims": 10
+}
+

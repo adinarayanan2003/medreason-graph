@@ -1,0 +1,45 @@
+[
+  {
+    "case_id": "eval_chest_pain_acs",
+    "case": {
+      "case_id": "eval_chest_pain_acs",
+      "patient": {"age": 45, "sex": "male"},
+      "chief_complaint": "crushing chest pain",
+      "findings": [
+        {"type": "symptom", "name": "left arm radiation", "status": "present"},
+        {"type": "symptom", "name": "diaphoresis", "status": "present"},
+        {"type": "symptom", "name": "nausea", "status": "present"}
+      ],
+      "free_text": "45M with crushing chest pain, sweating, nausea, and left arm radiation."
+    },
+    "expected_conditions": ["acute coronary syndrome", "aortic dissection", "pulmonary embolism"]
+  },
+  {
+    "case_id": "eval_dyspnea_pe",
+    "case": {
+      "case_id": "eval_dyspnea_pe",
+      "patient": {"age": 52, "sex": "female"},
+      "chief_complaint": "sudden dyspnea",
+      "findings": [
+        {"type": "symptom", "name": "pleuritic pain", "status": "present"},
+        {"type": "symptom", "name": "chest pain", "status": "present"}
+      ],
+      "free_text": "Sudden shortness of breath with pleuritic chest pain."
+    },
+    "expected_conditions": ["pulmonary embolism"]
+  },
+  {
+    "case_id": "eval_tearing_pain_dissection",
+    "case": {
+      "case_id": "eval_tearing_pain_dissection",
+      "patient": {"age": 61, "sex": "male"},
+      "chief_complaint": "tearing chest pain",
+      "findings": [
+        {"type": "symptom", "name": "tearing chest pain", "status": "present"}
+      ],
+      "free_text": "Abrupt tearing chest pain radiating to the back."
+    },
+    "expected_conditions": ["aortic dissection"]
+  }
+]
+

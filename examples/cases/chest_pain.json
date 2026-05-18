@@ -1,0 +1,37 @@
+{
+  "case_id": "case_chest_pain_001",
+  "patient": {
+    "age": 45,
+    "sex": "male"
+  },
+  "chief_complaint": "crushing chest pain",
+  "findings": [
+    {
+      "type": "symptom",
+      "name": "left arm radiation",
+      "status": "present"
+    },
+    {
+      "type": "symptom",
+      "name": "diaphoresis",
+      "status": "present"
+    },
+    {
+      "type": "symptom",
+      "name": "nausea",
+      "status": "present"
+    },
+    {
+      "type": "test",
+      "name": "ECG",
+      "status": "missing"
+    },
+    {
+      "type": "test",
+      "name": "troponin",
+      "status": "missing"
+    }
+  ],
+  "free_text": "45M with crushing chest pain, sweating, nausea, and left arm radiation."
+}
+

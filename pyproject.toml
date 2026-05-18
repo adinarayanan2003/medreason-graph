@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "medreason-graph"
+version = "0.1.0"
+description = "Auditable medical reasoning search engine using a verifiable evidence graph."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "medreason_graph" }
+]
+dependencies = []
+
+[project.optional-dependencies]
+api = ["fastapi>=0.110", "uvicorn>=0.27"]
+corpus = ["pypdf>=4"]
+vector = ["faiss-cpu>=1.8", "numpy>=1.25"]
+medical-encoders = ["faiss-cpu>=1.8", "numpy>=1.25", "torch>=2.2", "transformers>=4.40"]
+dev = ["pypdf>=4", "faiss-cpu>=1.8", "numpy>=1.25"]
+
+[project.scripts]
+medreason-graph = "medreason_graph.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
