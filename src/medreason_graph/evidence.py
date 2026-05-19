@@ -38,7 +38,21 @@ NON_RULE_OUT_CUES = (
     "can not exclude",
     "should not exclude",
 )
-TEST_CUES = ("obtain", "measure", "test", "evaluate", "initial evaluation", "serial", "perform")
+TEST_CUES = (
+    "obtain",
+    "measure",
+    "test",
+    "evaluate",
+    "initial evaluation",
+    "serial",
+    "perform",
+    "needed",
+    "aid",
+    "confirm",
+    "diagnose",
+    "diagnosing",
+    "diagnosis",
+)
 STRONG_CUES = ("classic", "high risk", "emergent", "urgent", "must", "immediate")
 WEAK_CUES = ("may", "can", "sometimes", "possible")
 DIFFERENTIAL_ONLY_CUES = (
@@ -207,11 +221,18 @@ def build_llm_extraction_payload(hit: RetrievalHit, case: PatientCase) -> dict[s
             "Return JSON only: {\"claims\": [...]}. Every claim must include claim_type, "
             "condition, finding, polarity, strength, exact_quote, source_span_start, "
             "source_span_end, and extraction_confidence. The exact_quote must be copied "
-            "verbatim from source.text. Do not infer facts from outside the source."
+            "verbatim from source.text. Do not infer facts from outside the source. "
+            "Use only allowed_conditions for condition. Use only allowed_findings_or_tests "
+            "for finding. Do not use a disease/condition as finding. Diagnostic tests must "
+            "be emitted as claim_type requires_test with polarity recommends."
         ),
         "allowed_claim_types": EVIDENCE_CLAIM_SCHEMA["properties"]["claim_type"]["enum"],
         "allowed_polarities": EVIDENCE_CLAIM_SCHEMA["properties"]["polarity"]["enum"],
         "allowed_strengths": EVIDENCE_CLAIM_SCHEMA["properties"]["strength"]["enum"],
+        "allowed_conditions": sorted(canonical for canonical, concept in CONCEPTS.items() if concept.kind == "condition"),
+        "allowed_findings_or_tests": sorted(
+            canonical for canonical, concept in CONCEPTS.items() if concept.kind in {"symptom", "test"}
+        ),
         "case": case.to_dict(),
         "retrieval": {
             "score": hit.score,
@@ -292,11 +313,11 @@ def _claim_from_llm_item(item: dict[str, Any], chunk: SourceChunk) -> EvidenceCl
     claim_type = _normalize_claim_type(str(item.get("claim_type", "")))
     if not claim_type:
         return None
-    condition = _canonical_or_raw(str(item.get("condition", "")), kind="condition")
+    condition = _canonical_known_concept(str(item.get("condition", "")), kind="condition")
     if not condition:
         return None
     finding_raw = item.get("finding") or item.get("finding_or_test") or item.get("test") or item.get("intervention")
-    finding = _canonical_or_raw(str(finding_raw), kind=None) if finding_raw else None
+    finding = _canonical_known_concept(str(finding_raw), kind=None) if finding_raw else None
     polarity = _normalize_polarity(str(item.get("polarity", "")), claim_type)
     if polarity == "recommends" and finding and _is_test_concept(finding):
         claim_type = "requires_test"
@@ -364,12 +385,23 @@ def _llm_claim_contradicts_span_semantics(claim: EvidenceClaim) -> bool:
 
 
 def _llm_claim_relevant_to_case(claim: EvidenceClaim, case: PatientCase) -> bool:
-    if claim.polarity == "recommends" or claim.claim_type in {"requires_test", "treatment_recommends"}:
-        return claim.finding is not None and _is_test_concept(claim.finding)
+    if not _is_condition_concept(claim.condition):
+        return False
     if not claim.finding:
         return False
+    if claim.finding == claim.condition or _is_condition_concept(claim.finding):
+        return False
+    if _is_test_concept(claim.finding):
+        return claim.claim_type == "requires_test" and claim.polarity == "recommends"
+    if claim.polarity == "recommends" or claim.claim_type in {"requires_test", "treatment_recommends"}:
+        return claim.finding is not None and _is_test_concept(claim.finding)
     patient_concepts = _case_concepts_by_status(case)
     return claim.finding in patient_concepts["present"]
+
+
+def _is_condition_concept(value: str) -> bool:
+    concept = CONCEPTS.get(value)
+    return concept is not None and concept.kind == "condition"
 
 
 def _is_test_concept(value: str) -> bool:
@@ -379,6 +411,8 @@ def _is_test_concept(value: str) -> bool:
 
 def _normalize_polarity(value: str, claim_type: str) -> str:
     normalized = normalize(value).replace(" ", "_")
+    if claim_type in {"requires_test", "treatment_recommends"}:
+        return "recommends"
     if normalized in EVIDENCE_CLAIM_SCHEMA["properties"]["polarity"]["enum"]:
         return normalized
     if claim_type in {"argues_against", "rules_out", "contraindicates"}:
@@ -403,11 +437,19 @@ def _normalize_confidence(value: Any) -> float:
     return max(0.0, min(round(confidence, 2), 1.0))
 
 
-def _canonical_or_raw(value: str, kind: str | None) -> str:
+def _canonical_known_concept(value: str, kind: str | None) -> str:
     value = value.strip()
     if not value:
         return ""
-    return canonicalize_term(value, kind=kind) or normalize(value)
+    canonical = canonicalize_term(value, kind=kind) or canonicalize_term(value)
+    if not canonical:
+        return ""
+    concept = CONCEPTS.get(canonical)
+    if concept is None:
+        return ""
+    if kind is not None and concept.kind != kind:
+        return ""
+    return canonical
 
 
 def _optional_int(value: Any) -> int | None:

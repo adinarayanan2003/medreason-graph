@@ -213,6 +213,7 @@ The command receives a JSON payload on stdin with the patient case, retrieved so
 ```
 
 The validator accepts only claims whose quote or offsets match the retrieved source text exactly.
+LLM claims are also constrained to configured medical concepts: conditions must resolve to known condition concepts, findings must resolve to known symptom/test concepts, conditions cannot be used as findings, and diagnostic tests must be emitted as `requires_test` with `recommends` polarity before they can affect ranking.
 
 The included [scripts/openai_claim_extractor.py](scripts/openai_claim_extractor.py) adapter reads `OPENAI_API_KEY` from `.env` or the process environment. You can override the model with:
 

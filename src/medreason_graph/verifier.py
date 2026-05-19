@@ -29,7 +29,22 @@ NON_RULE_OUT_CUES = (
     "can not exclude",
     "should not exclude",
 )
-TEST_CUES = ("obtain", "measure", "test", "evaluate", "initial evaluation", "serial", "perform", "imaging")
+TEST_CUES = (
+    "obtain",
+    "measure",
+    "test",
+    "evaluate",
+    "initial evaluation",
+    "serial",
+    "perform",
+    "imaging",
+    "needed",
+    "aid",
+    "confirm",
+    "diagnose",
+    "diagnosing",
+    "diagnosis",
+)
 RED_FLAG_CUES = ("red flag", "emergent", "emergency", "urgent", "dangerous", "high risk", "concerning")
 
 
@@ -74,6 +89,8 @@ def _verify_evidence_claim(claim: EvidenceClaim) -> ClaimVerification:
     if claim.claim_type == "requires_test" or claim.polarity == "recommends":
         if not claim.finding or not _is_test_concept(claim.finding):
             reasons.append("recommended_item_not_test")
+        elif claim.finding not in sentence_concepts and not phrase_in_text(claim.finding, sentence):
+            reasons.append("recommended_test_not_in_source_span")
         if not any(cue in lowered for cue in TEST_CUES):
             reasons.append("missing_test_recommendation_language")
 

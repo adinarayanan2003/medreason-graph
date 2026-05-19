@@ -383,6 +383,184 @@ class AnalysisTest(unittest.TestCase):
 
         self.assertEqual(claims, [])
 
+    def test_llm_extractor_rejects_unknown_condition(self) -> None:
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_test",
+                "patient": {},
+                "chief_complaint": "dyspnea",
+                "findings": [{"type": "symptom", "name": "shortness of breath", "status": "present"}],
+            }
+        )
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Dyspnea - StatPearls",
+            source_type="textbook",
+            section_path=["Dyspnea - StatPearls", "History and Physical"],
+            section_type="symptoms",
+            paragraph_index=1,
+            text="Acute dyspnea suggests pulmonary embolism, asthma exacerbation, pneumonia, or heart failure.",
+        )
+        hit = RetrievalHit(chunk=chunk, score=1.0, matched_terms=["dyspnea"], score_parts={})
+
+        claims = extract_evidence_claims(
+            [hit],
+            case,
+            extractor="llm",
+            llm_command=_fake_llm_command(
+                {
+                    "claims": [
+                        {
+                            "claim_type": "supports",
+                            "condition": "acute dyspnea",
+                            "finding": "dyspnea",
+                            "polarity": "supports",
+                            "strength": "moderate",
+                            "exact_quote": "Acute dyspnea suggests pulmonary embolism, asthma exacerbation, pneumonia, or heart failure.",
+                            "extraction_confidence": 0.9,
+                        }
+                    ]
+                }
+            ),
+        )
+
+        self.assertEqual(claims, [])
+
+    def test_llm_extractor_rejects_condition_as_finding(self) -> None:
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_test",
+                "patient": {},
+                "chief_complaint": "dyspnea",
+                "findings": [{"type": "symptom", "name": "shortness of breath", "status": "present"}],
+            }
+        )
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Acute Pulmonary Embolism - StatPearls",
+            source_type="textbook",
+            section_path=["Acute Pulmonary Embolism - StatPearls", "History and Physical"],
+            section_type="symptoms",
+            paragraph_index=1,
+            text="Dyspnea may be acute and severe in pulmonary embolism.",
+        )
+        hit = RetrievalHit(chunk=chunk, score=1.0, matched_terms=["dyspnea"], score_parts={})
+
+        claims = extract_evidence_claims(
+            [hit],
+            case,
+            extractor="llm",
+            llm_command=_fake_llm_command(
+                {
+                    "claims": [
+                        {
+                            "claim_type": "supports",
+                            "condition": "pulmonary embolism",
+                            "finding": "pulmonary embolism",
+                            "polarity": "supports",
+                            "strength": "moderate",
+                            "exact_quote": "Dyspnea may be acute and severe in pulmonary embolism.",
+                            "extraction_confidence": 0.9,
+                        }
+                    ]
+                }
+            ),
+        )
+
+        self.assertEqual(claims, [])
+
+    def test_llm_extractor_rejects_test_as_supporting_finding(self) -> None:
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_test",
+                "patient": {},
+                "chief_complaint": "dyspnea",
+                "findings": [{"type": "test", "name": "chest x-ray", "status": "missing"}],
+            }
+        )
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Community-Acquired Pneumonia - StatPearls",
+            source_type="textbook",
+            section_path=["Community-Acquired Pneumonia - StatPearls", "Evaluation"],
+            section_type="diagnostic_criteria",
+            paragraph_index=1,
+            text="A chest x-ray will be needed to identify an infiltrate or effusion.",
+        )
+        hit = RetrievalHit(chunk=chunk, score=1.0, matched_terms=["x-ray"], score_parts={})
+
+        claims = extract_evidence_claims(
+            [hit],
+            case,
+            extractor="llm",
+            llm_command=_fake_llm_command(
+                {
+                    "claims": [
+                        {
+                            "claim_type": "supports",
+                            "condition": "pneumonia",
+                            "finding": "chest x-ray",
+                            "polarity": "supports",
+                            "strength": "moderate",
+                            "exact_quote": "A chest x-ray will be needed to identify an infiltrate or effusion.",
+                            "extraction_confidence": 0.9,
+                        }
+                    ]
+                }
+            ),
+        )
+
+        self.assertEqual(claims, [])
+
+    def test_llm_extractor_forces_required_test_polarity_to_recommends(self) -> None:
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_test",
+                "patient": {},
+                "chief_complaint": "dyspnea",
+                "findings": [{"type": "test", "name": "chest x-ray", "status": "missing"}],
+            }
+        )
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Community-Acquired Pneumonia - StatPearls",
+            source_type="textbook",
+            section_path=["Community-Acquired Pneumonia - StatPearls", "Evaluation"],
+            section_type="diagnostic_criteria",
+            paragraph_index=1,
+            text="A chest x-ray will be needed to identify an infiltrate or effusion.",
+        )
+        hit = RetrievalHit(chunk=chunk, score=1.0, matched_terms=["x-ray"], score_parts={})
+
+        claims = extract_evidence_claims(
+            [hit],
+            case,
+            extractor="llm",
+            llm_command=_fake_llm_command(
+                {
+                    "claims": [
+                        {
+                            "claim_type": "requires_test",
+                            "condition": "pneumonia",
+                            "finding": "chest x-ray",
+                            "polarity": "supports",
+                            "strength": "moderate",
+                            "exact_quote": "A chest x-ray will be needed to identify an infiltrate or effusion.",
+                            "extraction_confidence": 0.9,
+                        }
+                    ]
+                }
+            ),
+        )
+
+        self.assertEqual(len(claims), 1)
+        self.assertEqual(claims[0].claim_type, "requires_test")
+        self.assertEqual(claims[0].polarity, "recommends")
+
     def test_claim_verifier_rejects_differential_language_as_support(self) -> None:
         case = PatientCase.from_dict(
             {
@@ -489,6 +667,53 @@ class AnalysisTest(unittest.TestCase):
         self.assertTrue(claims)
         self.assertFalse(verifications[0].supported)
         self.assertIn("negative_claim_condition_not_in_source_span", verifications[0].reasons)
+
+    def test_required_test_must_appear_in_cited_sentence(self) -> None:
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Typical Bacterial Pneumonia - StatPearls",
+            source_type="textbook",
+            section_path=["Typical Bacterial Pneumonia - StatPearls", "Evaluation"],
+            section_type="diagnostic_criteria",
+            paragraph_index=1,
+            text="Computed tomography can also be used if the diagnosis is not confirmed by chest x-ray.",
+        )
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_test",
+                "patient": {},
+                "chief_complaint": "dyspnea",
+                "findings": [{"type": "test", "name": "ct pulmonary angiography", "status": "missing"}],
+            }
+        )
+        hit = RetrievalHit(chunk=chunk, score=1.0, matched_terms=["tomography"], score_parts={})
+        claims = extract_evidence_claims(
+            [hit],
+            case,
+            extractor="llm",
+            llm_command=_fake_llm_command(
+                {
+                    "claims": [
+                        {
+                            "claim_type": "requires_test",
+                            "condition": "pneumonia",
+                            "finding": "ct pulmonary angiography",
+                            "polarity": "recommends",
+                            "strength": "moderate",
+                            "exact_quote": "Computed tomography can also be used if the diagnosis is not confirmed by chest x-ray.",
+                            "extraction_confidence": 0.9,
+                        }
+                    ]
+                }
+            ),
+        )
+
+        verifications = verify_evidence_claims(claims)
+
+        self.assertTrue(claims)
+        self.assertFalse(verifications[0].supported)
+        self.assertIn("recommended_test_not_in_source_span", verifications[0].reasons)
 
     def test_analyzer_filters_failed_claims_before_reasoning(self) -> None:
         chunk = SourceChunk(
