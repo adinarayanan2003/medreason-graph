@@ -41,6 +41,12 @@ class TerminologyTest(unittest.TestCase):
         self.assertNotIn("pulmonary embolism", detect_concepts(exam_context))
         self.assertIn("pulmonary embolism", detect_concepts(pulmonary_context))
 
+    def test_pleuritic_chest_pain_is_a_symptom_not_a_condition_match(self) -> None:
+        text = "Pleuritic chest pain and fever can occur with pneumonia."
+
+        self.assertIn("pleuritic pain", detect_concepts(text, kind="symptom"))
+        self.assertNotIn("pulmonary embolism", detect_concepts(text, kind="condition"))
+
     def test_absent_findings_are_not_used_as_supporting_patient_facts(self) -> None:
         chunks = ingest_path(ROOT / "examples" / "corpus", source_type="guideline")
         case = PatientCase.from_dict(
@@ -63,4 +69,3 @@ class TerminologyTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

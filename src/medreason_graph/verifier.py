@@ -41,11 +41,22 @@ def _verify_evidence_claim(claim: EvidenceClaim) -> ClaimVerification:
     reasons: list[str] = []
     sentence = claim.sentence
     lowered = normalize(sentence)
+    source_context = " ".join([claim.source_title, *claim.section_path, sentence])
     sentence_conditions = detect_concepts(sentence, kind="condition")
+    context_conditions = detect_concepts(source_context, kind="condition")
     sentence_concepts = detect_concepts(sentence)
 
-    if claim.condition not in sentence_conditions and not phrase_in_text(claim.condition, sentence):
-        reasons.append("condition_not_in_source_span")
+    if (
+        claim.condition not in sentence_conditions
+        and claim.condition not in context_conditions
+        and not phrase_in_text(claim.condition, sentence)
+        and not phrase_in_text(claim.condition, source_context)
+    ):
+        reasons.append("condition_not_in_source_context")
+
+    if claim.polarity == "argues_against" or claim.claim_type == "rules_out":
+        if claim.condition not in sentence_conditions and not phrase_in_text(claim.condition, sentence):
+            reasons.append("negative_claim_condition_not_in_source_span")
 
     if claim.finding and claim.polarity != "recommends":
         if claim.finding not in sentence_concepts and not phrase_in_text(claim.finding, sentence):
@@ -76,6 +87,14 @@ def _verify_evidence_claim(claim: EvidenceClaim) -> ClaimVerification:
         claim_id=claim.id,
         supported=not reasons,
         reasons=sorted(set(reasons)),
+        claim_type=claim.claim_type,
+        condition=claim.condition,
+        finding=claim.finding,
+        polarity=claim.polarity,
+        sentence=claim.sentence,
+        source_title=claim.source_title,
+        source_span_start=claim.source_span_start,
+        source_span_end=claim.source_span_end,
         verifier_method=CLAIM_VERIFIER_METHOD,
     )
 

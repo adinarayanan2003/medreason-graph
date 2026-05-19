@@ -41,7 +41,61 @@
       "license": "Official NIH/NHLBI public health publication",
       "provider": "NHLBI",
       "format": "pdf"
+    },
+    {
+      "id": "ncbi_statpearls_chest_pain",
+      "title": "Chest Pain - StatPearls",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK470557/?report=printable",
+      "file_name": "ncbi_statpearls_chest_pain.html",
+      "source_type": "textbook",
+      "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
+      "provider": "NCBI Bookshelf",
+      "format": "html",
+      "source_pack": "chest_pain"
+    },
+    {
+      "id": "ncbi_statpearls_dyspnea",
+      "title": "Dyspnea - StatPearls",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK499965/?report=printable",
+      "file_name": "ncbi_statpearls_dyspnea.html",
+      "source_type": "textbook",
+      "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
+      "provider": "NCBI Bookshelf",
+      "format": "html",
+      "source_pack": "dyspnea"
+    },
+    {
+      "id": "ncbi_statpearls_community_acquired_pneumonia",
+      "title": "Community-Acquired Pneumonia - StatPearls",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK430749/?report=printable",
+      "file_name": "ncbi_statpearls_community_acquired_pneumonia.html",
+      "source_type": "textbook",
+      "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
+      "provider": "NCBI Bookshelf",
+      "format": "html",
+      "source_pack": "dyspnea"
+    },
+    {
+      "id": "ncbi_statpearls_asthma",
+      "title": "Asthma - StatPearls",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK430901/?report=printable",
+      "file_name": "ncbi_statpearls_asthma.html",
+      "source_type": "textbook",
+      "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
+      "provider": "NCBI Bookshelf",
+      "format": "html",
+      "source_pack": "dyspnea"
+    },
+    {
+      "id": "ncbi_statpearls_typical_bacterial_pneumonia",
+      "title": "Typical Bacterial Pneumonia - StatPearls",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK534295/?report=printable",
+      "file_name": "ncbi_statpearls_typical_bacterial_pneumonia.html",
+      "source_type": "textbook",
+      "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
+      "provider": "NCBI Bookshelf",
+      "format": "html",
+      "source_pack": "dyspnea"
     }
   ]
 }
-

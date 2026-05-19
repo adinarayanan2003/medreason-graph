@@ -1,0 +1,56 @@
+{
+  "case_id": "real_demo_chest_pain",
+  "patient": {
+    "age": 62,
+    "sex": "male"
+  },
+  "chief_complaint": "chest pain",
+  "findings": [
+    {
+      "type": "symptom",
+      "name": "chest pressure",
+      "status": "present"
+    },
+    {
+      "type": "symptom",
+      "name": "radiates to left arm",
+      "status": "present"
+    },
+    {
+      "type": "symptom",
+      "name": "diaphoresis",
+      "status": "present"
+    },
+    {
+      "type": "symptom",
+      "name": "nausea",
+      "status": "present"
+    },
+    {
+      "type": "symptom",
+      "name": "shortness of breath",
+      "status": "present"
+    },
+    {
+      "type": "test",
+      "name": "ecg",
+      "status": "missing"
+    },
+    {
+      "type": "test",
+      "name": "troponin",
+      "status": "missing"
+    },
+    {
+      "type": "test",
+      "name": "ct pulmonary angiography",
+      "status": "missing"
+    },
+    {
+      "type": "test",
+      "name": "ct angiography",
+      "status": "missing"
+    }
+  ],
+  "free_text": "High-risk chest pain demo case for testing real open-source corpus retrieval and auditable evidence output."
+}

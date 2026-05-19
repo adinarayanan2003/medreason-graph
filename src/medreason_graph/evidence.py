@@ -85,16 +85,18 @@ def extract_deterministic_evidence_claims(hits: list[RetrievalHit], case: Patien
     seen: set[tuple[str, str, str | None, str, str]] = set()
 
     for hit in hits:
+        context_conditions = _chunk_context_conditions(hit.chunk)
         for sentence, span_start, span_end in sentence_spans(hit.chunk.text):
             sentence_conditions = detect_concepts(sentence, kind="condition")
+            conditions = sentence_conditions or context_conditions
             sentence_findings = detect_concepts(sentence) - sentence_conditions
-            if not sentence_conditions:
+            if not conditions:
                 continue
             polarity = _detect_polarity(sentence)
             strength = _detect_strength(sentence, hit.chunk.source_type)
             differential_only = _is_differential_only(sentence)
 
-            for condition in sorted(sentence_conditions):
+            for condition in sorted(conditions):
                 present_matches = sorted(patient_concepts["present"] & sentence_findings)
                 if not differential_only:
                     for finding in present_matches:
@@ -434,6 +436,11 @@ def _case_concepts_by_status(case: PatientCase) -> dict[str, set[str]]:
         if canonical and finding.status in concepts:
             concepts[finding.status].add(canonical)
     return concepts
+
+
+def _chunk_context_conditions(chunk: SourceChunk) -> set[str]:
+    context = " ".join([chunk.title, *chunk.section_path])
+    return detect_concepts(context, kind="condition")
 
 
 def _test_mentions(text: str) -> set[str]:

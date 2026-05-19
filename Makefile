@@ -1,8 +1,9 @@
-.PHONY: test demo demo-json graph-dot graph-cytoscape compile download-open-corpus build-open-corpus index-open-corpus index-open-corpus-faiss index-open-corpus-medcpt evaluate-open-corpus evaluate-open-corpus-sqlite evaluate-open-corpus-faiss evaluate-open-corpus-medcpt
+.PHONY: test demo demo-json graph-dot graph-cytoscape compile download-open-corpus build-open-corpus index-open-corpus index-open-corpus-faiss index-open-corpus-medcpt real-output-demo evaluate-open-corpus evaluate-open-corpus-sqlite evaluate-open-corpus-faiss evaluate-open-corpus-medcpt
 
 PYTHON ?= python3
 PYTHONPATH := src
 CORPUS := /tmp/medreason_corpus.json
+REAL_OUTPUT_DIR ?= /tmp/medreason_real_outputs
 
 test:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m unittest discover -s tests -v
@@ -40,6 +41,9 @@ index-open-corpus-faiss:
 
 index-open-corpus-medcpt:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m medreason_graph.cli index-faiss --corpus data/open_corpus/open_medical_corpus.json --out data/open_corpus/open_medical_corpus_medcpt.faiss --embedding-preset medcpt --batch-size 8 --document-max-length 256 --query-max-length 64
+
+real-output-demo: download-open-corpus build-open-corpus index-open-corpus
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/generate_real_outputs.py --corpus data/open_corpus/open_medical_corpus.json --out-dir $(REAL_OUTPUT_DIR) --retriever sqlite --index data/open_corpus/open_medical_corpus.sqlite
 
 evaluate-open-corpus:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m medreason_graph.cli evaluate-retrieval --corpus data/open_corpus/open_medical_corpus.json --cases evaluation/retrieval_cases.json --k 5

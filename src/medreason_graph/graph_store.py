@@ -132,8 +132,14 @@ def query_verifier_failures(path: str | Path) -> list[dict[str, Any]]:
         rows = conn.execute(
             """
             SELECT v.claim_id, v.supported, v.reasons_json, v.verifier_method,
-                   c.claim_type, c.condition, c.finding, c.polarity, c.sentence,
-                   c.source_title, c.source_span_start, c.source_span_end
+                   COALESCE(c.claim_type, v.claim_type) AS claim_type,
+                   COALESCE(c.condition, v.condition) AS condition,
+                   COALESCE(c.finding, v.finding) AS finding,
+                   COALESCE(c.polarity, v.polarity) AS polarity,
+                   COALESCE(c.sentence, v.sentence) AS sentence,
+                   COALESCE(c.source_title, v.source_title) AS source_title,
+                   COALESCE(c.source_span_start, v.source_span_start) AS source_span_start,
+                   COALESCE(c.source_span_end, v.source_span_end) AS source_span_end
             FROM claim_verifications v
             LEFT JOIN evidence_claims c ON c.id = v.claim_id
             WHERE v.supported = 0
@@ -214,6 +220,14 @@ def _init_schema(conn: sqlite3.Connection) -> None:
           case_id TEXT NOT NULL,
           supported INTEGER NOT NULL,
           reasons_json TEXT NOT NULL,
+          claim_type TEXT,
+          condition TEXT,
+          finding TEXT,
+          polarity TEXT,
+          sentence TEXT,
+          source_title TEXT,
+          source_span_start INTEGER,
+          source_span_end INTEGER,
           verifier_method TEXT NOT NULL,
           FOREIGN KEY (case_id) REFERENCES cases(case_id) ON DELETE CASCADE
         );
@@ -263,10 +277,28 @@ def _init_schema(conn: sqlite3.Connection) -> None:
           ON reasoning_steps(condition);
         """
     )
+    _ensure_claim_verification_snapshot_columns(conn)
     conn.execute(
         "INSERT OR REPLACE INTO metadata(key, value) VALUES (?, ?)",
         ("schema_version", str(SCHEMA_VERSION)),
     )
+
+
+def _ensure_claim_verification_snapshot_columns(conn: sqlite3.Connection) -> None:
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(claim_verifications)").fetchall()}
+    columns = {
+        "claim_type": "TEXT",
+        "condition": "TEXT",
+        "finding": "TEXT",
+        "polarity": "TEXT",
+        "sentence": "TEXT",
+        "source_title": "TEXT",
+        "source_span_start": "INTEGER",
+        "source_span_end": "INTEGER",
+    }
+    for name, column_type in columns.items():
+        if name not in existing:
+            conn.execute(f"ALTER TABLE claim_verifications ADD COLUMN {name} {column_type}")
 
 
 def _clear_case(conn: sqlite3.Connection, case_id: str) -> None:
@@ -339,14 +371,26 @@ def _insert_result(conn: sqlite3.Connection, result: AnalysisResult) -> None:
     for verification in result.claim_verifications:
         conn.execute(
             """
-            INSERT INTO claim_verifications(claim_id, case_id, supported, reasons_json, verifier_method)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO claim_verifications(
+              claim_id, case_id, supported, reasons_json, claim_type, condition,
+              finding, polarity, sentence, source_title, source_span_start,
+              source_span_end, verifier_method
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 verification.claim_id,
                 result.case_id,
                 1 if verification.supported else 0,
                 json.dumps(verification.reasons),
+                verification.claim_type,
+                verification.condition,
+                verification.finding,
+                verification.polarity,
+                verification.sentence,
+                verification.source_title,
+                verification.source_span_start,
+                verification.source_span_end,
                 verification.verifier_method,
             ),
         )

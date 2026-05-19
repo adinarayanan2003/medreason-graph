@@ -29,7 +29,7 @@ CONCEPTS: dict[str, Concept] = {
     "pulmonary embolism": Concept(
         "pulmonary embolism",
         "condition",
-        ("pe", "pulmonary embolism", "blood clot in lung", "pleuritic chest pain"),
+        ("pe", "pulmonary embolism", "blood clot in lung"),
     ),
     "aortic dissection": Concept(
         "aortic dissection",
@@ -43,6 +43,12 @@ CONCEPTS: dict[str, Concept] = {
     ),
     "migraine": Concept("migraine", "condition", ("migraine", "recurrent headache", "photophobia")),
     "meningitis": Concept("meningitis", "condition", ("meningitis", "neck stiffness", "fever with headache")),
+    "pneumonia": Concept(
+        "pneumonia",
+        "condition",
+        ("pneumonia", "community-acquired pneumonia", "cap", "typical bacterial pneumonia"),
+    ),
+    "asthma": Concept("asthma", "condition", ("asthma", "asthma exacerbation", "bronchial asthma", "reactive airway disease")),
     "chest pain": Concept("chest pain", "symptom", ("chest pain", "chest discomfort", "chest pressure")),
     "left arm radiation": Concept(
         "left arm radiation",
@@ -52,11 +58,14 @@ CONCEPTS: dict[str, Concept] = {
     "diaphoresis": Concept("diaphoresis", "symptom", ("diaphoresis", "sweating", "sweatiness")),
     "nausea": Concept("nausea", "symptom", ("nausea", "vomiting", "nauseated")),
     "dyspnea": Concept("dyspnea", "symptom", ("dyspnea", "shortness of breath", "sob", "breathlessness")),
-    "pleuritic pain": Concept("pleuritic pain", "symptom", ("pleuritic pain", "worse with breathing")),
+    "pleuritic pain": Concept("pleuritic pain", "symptom", ("pleuritic pain", "pleuritic chest pain", "worse with breathing")),
     "tearing chest pain": Concept("tearing chest pain", "symptom", ("tearing chest pain", "ripping chest pain")),
     "headache": Concept("headache", "symptom", ("headache", "head pain")),
     "fever": Concept("fever", "symptom", ("fever", "febrile", "high temperature")),
     "neck stiffness": Concept("neck stiffness", "symptom", ("neck stiffness", "stiff neck", "meningismus")),
+    "cough": Concept("cough", "symptom", ("cough", "coughing")),
+    "wheezing": Concept("wheezing", "symptom", ("wheezing", "wheeze", "wheezes")),
+    "sputum production": Concept("sputum production", "symptom", ("sputum production", "sputum", "productive cough")),
     "ecg": Concept("ecg", "test", ("ecg", "ekg", "electrocardiogram", "12-lead ecg")),
     "troponin": Concept("troponin", "test", ("troponin", "cardiac troponin", "serial troponin")),
     "ct pulmonary angiography": Concept(
@@ -65,6 +74,14 @@ CONCEPTS: dict[str, Concept] = {
         ("ct pulmonary angiography", "ctpa", "pulmonary angiography"),
     ),
     "ct angiography": Concept("ct angiography", "test", ("ct angiography", "cta", "aortic imaging")),
+    "chest x-ray": Concept("chest x-ray", "test", ("chest x-ray", "chest xray", "chest radiograph", "radiography")),
+    "pulse oximetry": Concept("pulse oximetry", "test", ("pulse oximetry", "oxygen saturation", "spo2")),
+    "complete blood count": Concept(
+        "complete blood count",
+        "test",
+        ("complete blood count", "cbc", "white blood cell count", "wbc"),
+    ),
+    "spirometry": Concept("spirometry", "test", ("spirometry", "pulmonary function test", "pulmonary function testing")),
 }
 
 
@@ -91,12 +108,14 @@ HIGH_RISK_CONDITIONS = {
     "pulmonary embolism": "emergent",
     "aortic dissection": "emergent",
     "meningitis": "emergent",
+    "pneumonia": "urgent",
+    "asthma": "urgent",
 }
 
 
 DANGEROUS_ALTERNATIVES = {
     "chest pain": ("acute coronary syndrome", "pulmonary embolism", "aortic dissection"),
-    "dyspnea": ("pulmonary embolism", "acute coronary syndrome"),
+    "dyspnea": ("pulmonary embolism", "acute coronary syndrome", "pneumonia", "asthma"),
     "headache": ("meningitis",),
 }
 

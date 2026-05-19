@@ -83,6 +83,7 @@ medreason-graph build-open-corpus --downloaded-manifest data/open_sources/downlo
 medreason-graph index-corpus --corpus data/open_corpus/open_medical_corpus.json --out data/open_corpus/open_medical_corpus.sqlite
 medreason-graph index-faiss --corpus data/open_corpus/open_medical_corpus.json --out data/open_corpus/open_medical_corpus.faiss
 medreason-graph index-faiss --corpus data/open_corpus/open_medical_corpus.json --out data/open_corpus/open_medical_corpus_medcpt.faiss --embedding-preset medcpt
+PYTHONPATH=src python3 scripts/generate_real_outputs.py --corpus data/open_corpus/open_medical_corpus.json --retriever sqlite --index data/open_corpus/open_medical_corpus.sqlite
 medreason-graph evaluate-retrieval --corpus data/open_corpus/open_medical_corpus.json --cases evaluation/retrieval_cases.json --k 5
 medreason-graph evaluate-retrieval --corpus data/open_corpus/open_medical_corpus.json --retriever sqlite --index data/open_corpus/open_medical_corpus.sqlite
 medreason-graph evaluate-retrieval --corpus data/open_corpus/open_medical_corpus.json --retriever faiss --index data/open_corpus/open_medical_corpus.faiss
@@ -110,6 +111,17 @@ make build-open-corpus
 ```
 
 Downloaded raw files go under `data/open_sources/raw/`. The ingested corpus is written to `data/open_corpus/open_medical_corpus.json`.
+
+Generate auditable reports from the real downloaded corpus:
+
+```bash
+make real-output-demo PYTHON=.venv/bin/python
+```
+
+By default this writes reports, analysis JSON, graph stores, and verifier-failure files to `/tmp/medreason_real_outputs` for:
+
+- [examples/cases/chest_pain_real_demo.json](examples/cases/chest_pain_real_demo.json)
+- [examples/cases/dyspnea_real_demo.json](examples/cases/dyspnea_real_demo.json)
 
 Evaluate retrieval on the seed cases:
 
@@ -169,7 +181,7 @@ Retrieved passages are converted into structured `EvidenceClaim` records before 
 - extraction confidence;
 - extraction method.
 
-The deterministic extractor currently handles `supports`, `argues_against`, `requires_test`, `rules_out`, and `red_flag` claim types. Spanless or schema-invalid claims are rejected before graph construction.
+The deterministic extractor currently handles `supports`, `argues_against`, `requires_test`, `rules_out`, and `red_flag` claim types. Spanless or schema-invalid claims are rejected before graph construction. For textbook-style chapters, condition context can come from the source title or section path, while findings and tests still have to appear in the cited source span.
 
 For richer extraction, use the LLM command adapter:
 

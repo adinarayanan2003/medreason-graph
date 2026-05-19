@@ -19,8 +19,16 @@ def render_text(result: AnalysisResult) -> str:
         )
         if item.missing_evidence:
             lines.append(f"   Missing evidence: {', '.join(item.missing_evidence)}")
-        for step_id in item.reasoning_steps[:5]:
+        shown_steps = 0
+        shown_statements: set[str] = set()
+        for step_id in item.reasoning_steps:
+            if shown_steps >= 5:
+                break
             step = steps_by_id[step_id]
+            if step.statement in shown_statements:
+                continue
+            shown_statements.add(step.statement)
+            shown_steps += 1
             sources = ", ".join(_source_label(claims_by_id[claim_id]) for claim_id in step.uses_evidence if claim_id in claims_by_id)
             lines.append(f"   - {step.statement} ({sources})")
     if result.verifier.source_conflicts or result.verifier.unsupported_claims:

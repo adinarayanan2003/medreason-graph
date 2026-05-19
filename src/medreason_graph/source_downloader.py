@@ -76,6 +76,7 @@ def build_downloaded_corpus(downloaded_manifest_path: str | Path, out_path: str 
                 "provider": source.get("provider"),
                 "license": source.get("license"),
                 "url": source.get("url"),
+                "source_pack": source.get("source_pack"),
                 "sha256": source.get("sha256"),
             }
             enriched.append(
@@ -122,4 +123,3 @@ def _download(url: str) -> tuple[bytes, dict[str, str]]:
     )
     with urllib.request.urlopen(request, timeout=60) as response:
         return response.read(), dict(response.headers.items())
-

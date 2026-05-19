@@ -6,7 +6,7 @@
     },
     "pulmonary embolism": {
       "kind": "condition",
-      "synonyms": ["pe", "pulmonary embolism", "blood clot in lung", "pleuritic chest pain"]
+      "synonyms": ["pe", "pulmonary embolism", "blood clot in lung"]
     },
     "aortic dissection": {
       "kind": "condition",
@@ -23,6 +23,14 @@
     "meningitis": {
       "kind": "condition",
       "synonyms": ["meningitis", "neck stiffness", "fever with headache"]
+    },
+    "pneumonia": {
+      "kind": "condition",
+      "synonyms": ["pneumonia", "community-acquired pneumonia", "cap", "typical bacterial pneumonia"]
+    },
+    "asthma": {
+      "kind": "condition",
+      "synonyms": ["asthma", "asthma exacerbation", "bronchial asthma", "reactive airway disease"]
     },
     "chest pain": {
       "kind": "symptom",
@@ -46,7 +54,7 @@
     },
     "pleuritic pain": {
       "kind": "symptom",
-      "synonyms": ["pleuritic pain", "worse with breathing"]
+      "synonyms": ["pleuritic pain", "pleuritic chest pain", "worse with breathing"]
     },
     "tearing chest pain": {
       "kind": "symptom",
@@ -64,6 +72,18 @@
       "kind": "symptom",
       "synonyms": ["neck stiffness", "stiff neck", "meningismus"]
     },
+    "cough": {
+      "kind": "symptom",
+      "synonyms": ["cough", "coughing"]
+    },
+    "wheezing": {
+      "kind": "symptom",
+      "synonyms": ["wheezing", "wheeze", "wheezes"]
+    },
+    "sputum production": {
+      "kind": "symptom",
+      "synonyms": ["sputum production", "sputum", "productive cough"]
+    },
     "ecg": {
       "kind": "test",
       "synonyms": ["ecg", "ekg", "electrocardiogram", "12-lead ecg"]
@@ -79,6 +99,22 @@
     "ct angiography": {
       "kind": "test",
       "synonyms": ["ct angiography", "cta", "aortic imaging"]
+    },
+    "chest x-ray": {
+      "kind": "test",
+      "synonyms": ["chest x-ray", "chest xray", "chest radiograph", "radiography"]
+    },
+    "pulse oximetry": {
+      "kind": "test",
+      "synonyms": ["pulse oximetry", "oxygen saturation", "spo2"]
+    },
+    "complete blood count": {
+      "kind": "test",
+      "synonyms": ["complete blood count", "cbc", "white blood cell count", "wbc"]
+    },
+    "spirometry": {
+      "kind": "test",
+      "synonyms": ["spirometry", "pulmonary function test", "pulmonary function testing"]
     }
   },
   "source_type_weight": {
@@ -99,11 +135,13 @@
     "acute coronary syndrome": "emergent",
     "pulmonary embolism": "emergent",
     "aortic dissection": "emergent",
-    "meningitis": "emergent"
+    "meningitis": "emergent",
+    "pneumonia": "urgent",
+    "asthma": "urgent"
   },
   "dangerous_alternatives": {
     "chest pain": ["acute coronary syndrome", "pulmonary embolism", "aortic dissection"],
-    "dyspnea": ["pulmonary embolism", "acute coronary syndrome"],
+    "dyspnea": ["pulmonary embolism", "acute coronary syndrome", "pneumonia", "asthma"],
     "headache": ["meningitis"]
   },
   "section_keywords": {

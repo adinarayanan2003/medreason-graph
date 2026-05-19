@@ -175,6 +175,14 @@ class ClaimVerification:
     claim_id: str
     supported: bool
     reasons: list[str]
+    claim_type: str | None = None
+    condition: str | None = None
+    finding: str | None = None
+    polarity: str | None = None
+    sentence: str | None = None
+    source_title: str | None = None
+    source_span_start: int | None = None
+    source_span_end: int | None = None
     verifier_method: str = "deterministic_claim_verifier_v1"
 
     def to_dict(self) -> dict[str, Any]:

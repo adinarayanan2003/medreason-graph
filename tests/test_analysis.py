@@ -430,6 +430,66 @@ class AnalysisTest(unittest.TestCase):
         self.assertFalse(verifications[0].supported)
         self.assertIn("differential_language_not_support", verifications[0].reasons)
 
+    def test_textbook_title_can_supply_condition_context(self) -> None:
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_test",
+                "patient": {},
+                "chief_complaint": "dyspnea",
+                "findings": [
+                    {"type": "symptom", "name": "shortness of breath", "status": "present"},
+                    {"type": "symptom", "name": "cough", "status": "present"},
+                    {"type": "symptom", "name": "fever", "status": "present"},
+                ],
+            }
+        )
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Community-Acquired Pneumonia - StatPearls",
+            source_type="textbook",
+            section_path=["Community-Acquired Pneumonia - StatPearls", "Clinical Features"],
+            section_type="symptoms",
+            paragraph_index=1,
+            text="Typical symptoms include cough, fever, and shortness of breath.",
+        )
+        hit = RetrievalHit(chunk=chunk, score=1.0, matched_terms=["cough"], score_parts={})
+
+        claims = extract_evidence_claims([hit], case)
+        verifications = verify_evidence_claims(claims)
+
+        self.assertTrue(claims)
+        self.assertTrue(all(claim.condition == "pneumonia" for claim in claims))
+        self.assertTrue(all(verification.supported for verification in verifications))
+
+    def test_negative_claim_requires_condition_in_cited_sentence(self) -> None:
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_test",
+                "patient": {},
+                "chief_complaint": "dyspnea",
+                "findings": [{"type": "symptom", "name": "shortness of breath", "status": "present"}],
+            }
+        )
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Acute Pulmonary Embolism - StatPearls",
+            source_type="textbook",
+            section_path=["Acute Pulmonary Embolism - StatPearls", "Evaluation"],
+            section_type="diagnostic_criteria",
+            paragraph_index=1,
+            text="It helps to rule out alternative diagnoses in patients presenting with acute dyspnea.",
+        )
+        hit = RetrievalHit(chunk=chunk, score=1.0, matched_terms=["dyspnea"], score_parts={})
+
+        claims = extract_evidence_claims([hit], case)
+        verifications = verify_evidence_claims(claims)
+
+        self.assertTrue(claims)
+        self.assertFalse(verifications[0].supported)
+        self.assertIn("negative_claim_condition_not_in_source_span", verifications[0].reasons)
+
     def test_analyzer_filters_failed_claims_before_reasoning(self) -> None:
         chunk = SourceChunk(
             id="chunk",

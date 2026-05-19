@@ -1,0 +1,61 @@
+{
+  "case_id": "real_demo_dyspnea",
+  "patient": {
+    "age": 44,
+    "sex": "female"
+  },
+  "chief_complaint": "dyspnea",
+  "findings": [
+    {
+      "type": "symptom",
+      "name": "shortness of breath",
+      "status": "present"
+    },
+    {
+      "type": "symptom",
+      "name": "fever",
+      "status": "present"
+    },
+    {
+      "type": "symptom",
+      "name": "cough",
+      "status": "present"
+    },
+    {
+      "type": "symptom",
+      "name": "pleuritic chest pain",
+      "status": "present"
+    },
+    {
+      "type": "symptom",
+      "name": "wheezing",
+      "status": "present"
+    },
+    {
+      "type": "test",
+      "name": "chest x-ray",
+      "status": "missing"
+    },
+    {
+      "type": "test",
+      "name": "pulse oximetry",
+      "status": "missing"
+    },
+    {
+      "type": "test",
+      "name": "complete blood count",
+      "status": "missing"
+    },
+    {
+      "type": "test",
+      "name": "ct pulmonary angiography",
+      "status": "missing"
+    },
+    {
+      "type": "test",
+      "name": "spirometry",
+      "status": "missing"
+    }
+  ],
+  "free_text": "Dyspnea demo case for testing pneumonia, asthma, pulmonary embolism, and acute coronary syndrome retrieval against open medical sources."
+}

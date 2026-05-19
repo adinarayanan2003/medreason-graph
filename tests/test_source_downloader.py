@@ -61,6 +61,7 @@ class SourceDownloaderTest(unittest.TestCase):
                                 "license": "test license",
                                 "provider": "NCBI Bookshelf",
                                 "format": "markdown",
+                                "source_pack": "demo",
                                 "sha256": "abc",
                             }
                         ]
@@ -77,8 +78,8 @@ class SourceDownloaderTest(unittest.TestCase):
         self.assertEqual(chunks[0].metadata["license"], "test license")
         self.assertEqual(chunks[0].metadata["provider"], "NCBI Bookshelf")
         self.assertEqual(chunks[0].metadata["source_manifest_id"], "source")
+        self.assertEqual(chunks[0].metadata["source_pack"], "demo")
 
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -15,7 +15,7 @@ from medreason_graph.graph_store import (
     query_verifier_failures,
 )
 from medreason_graph.ingestion import ingest_path
-from medreason_graph.models import PatientCase
+from medreason_graph.models import PatientCase, SourceChunk
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -65,6 +65,37 @@ class GraphStoreTest(unittest.TestCase):
         self.assertEqual(explanation["condition"], "acute coronary syndrome")
         self.assertTrue(explanation["evidence_for"])
         self.assertEqual(failures, [])
+
+    def test_verifier_failures_include_rejected_claim_snapshot(self) -> None:
+        case = PatientCase.from_dict(
+            {
+                "case_id": "case_graph_failures",
+                "patient": {},
+                "chief_complaint": "dyspnea",
+                "findings": [{"type": "symptom", "name": "shortness of breath", "status": "present"}],
+            }
+        )
+        chunk = SourceChunk(
+            id="chunk",
+            source_id="source",
+            title="Acute Pulmonary Embolism - StatPearls",
+            source_type="textbook",
+            section_path=["Acute Pulmonary Embolism - StatPearls", "Evaluation"],
+            section_type="diagnostic_criteria",
+            paragraph_index=1,
+            text="It helps to rule out alternative diagnoses in patients presenting with acute dyspnea.",
+        )
+        result = MedReasonAnalyzer([chunk]).analyze(case)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            graph_path = Path(temp_dir) / "case_graph.sqlite"
+            build_graph_store(result, graph_path)
+            failures = query_verifier_failures(graph_path)
+
+        self.assertEqual(len(failures), 1)
+        self.assertEqual(failures[0]["condition"], "pulmonary embolism")
+        self.assertEqual(failures[0]["finding"], "dyspnea")
+        self.assertIn("negative_claim_condition_not_in_source_span", failures[0]["reasons"])
 
 
 if __name__ == "__main__":
