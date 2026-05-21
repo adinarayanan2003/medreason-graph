@@ -28,3 +28,5 @@ data/open_corpus/open_medical_corpus.json
 data/open_corpus/open_medical_corpus.sqlite*
 data/open_corpus/open_medical_corpus.faiss*
 data/open_corpus/open_medical_corpus_medcpt.faiss*
+
+AGENTS.md
