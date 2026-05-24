@@ -10,7 +10,11 @@
       "source_type": "textbook",
       "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
       "provider": "NCBI Bookshelf",
-      "format": "html"
+      "format": "html",
+      "source_pack": "chest_pain",
+      "presentation_tags": ["chest_pain", "dyspnea"],
+      "condition_tags": ["acute coronary syndrome"],
+      "specialty_tags": ["cardiology", "emergency_medicine", "internal_medicine"]
     },
     {
       "id": "ncbi_statpearls_acute_pulmonary_embolism",
@@ -20,7 +24,11 @@
       "source_type": "textbook",
       "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
       "provider": "NCBI Bookshelf",
-      "format": "html"
+      "format": "html",
+      "source_pack": "chest_pain",
+      "presentation_tags": ["chest_pain", "dyspnea"],
+      "condition_tags": ["pulmonary embolism"],
+      "specialty_tags": ["emergency_medicine", "internal_medicine", "pulmonology"]
     },
     {
       "id": "ncbi_statpearls_aortic_dissection",
@@ -30,7 +38,11 @@
       "source_type": "textbook",
       "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
       "provider": "NCBI Bookshelf",
-      "format": "html"
+      "format": "html",
+      "source_pack": "chest_pain",
+      "presentation_tags": ["chest_pain", "dyspnea"],
+      "condition_tags": ["aortic dissection"],
+      "specialty_tags": ["cardiology", "emergency_medicine", "vascular_medicine"]
     },
     {
       "id": "nhlbi_heart_attack_wallet_card",
@@ -40,7 +52,11 @@
       "source_type": "guideline",
       "license": "Official NIH/NHLBI public health publication",
       "provider": "NHLBI",
-      "format": "pdf"
+      "format": "pdf",
+      "source_pack": "chest_pain",
+      "presentation_tags": ["chest_pain", "dyspnea"],
+      "condition_tags": ["acute coronary syndrome"],
+      "specialty_tags": ["cardiology", "emergency_medicine", "public_health"]
     },
     {
       "id": "ncbi_statpearls_chest_pain",
@@ -51,7 +67,15 @@
       "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
       "provider": "NCBI Bookshelf",
       "format": "html",
-      "source_pack": "chest_pain"
+      "source_pack": "chest_pain",
+      "presentation_tags": ["chest_pain"],
+      "condition_tags": [
+        "acute coronary syndrome",
+        "aortic dissection",
+        "gastroesophageal reflux disease",
+        "pulmonary embolism"
+      ],
+      "specialty_tags": ["emergency_medicine", "internal_medicine"]
     },
     {
       "id": "ncbi_statpearls_dyspnea",
@@ -62,7 +86,15 @@
       "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
       "provider": "NCBI Bookshelf",
       "format": "html",
-      "source_pack": "dyspnea"
+      "source_pack": "dyspnea",
+      "presentation_tags": ["chest_pain", "dyspnea"],
+      "condition_tags": [
+        "acute coronary syndrome",
+        "asthma",
+        "pneumonia",
+        "pulmonary embolism"
+      ],
+      "specialty_tags": ["emergency_medicine", "internal_medicine", "pulmonology"]
     },
     {
       "id": "ncbi_statpearls_community_acquired_pneumonia",
@@ -73,7 +105,10 @@
       "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
       "provider": "NCBI Bookshelf",
       "format": "html",
-      "source_pack": "dyspnea"
+      "source_pack": "dyspnea",
+      "presentation_tags": ["dyspnea", "fever"],
+      "condition_tags": ["pneumonia"],
+      "specialty_tags": ["infectious_disease", "internal_medicine", "pulmonology"]
     },
     {
       "id": "ncbi_statpearls_asthma",
@@ -84,7 +119,10 @@
       "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
       "provider": "NCBI Bookshelf",
       "format": "html",
-      "source_pack": "dyspnea"
+      "source_pack": "dyspnea",
+      "presentation_tags": ["dyspnea"],
+      "condition_tags": ["asthma"],
+      "specialty_tags": ["allergy_immunology", "pulmonology"]
     },
     {
       "id": "ncbi_statpearls_typical_bacterial_pneumonia",
@@ -95,7 +133,10 @@
       "license": "CC BY-NC-ND 4.0 per NCBI Bookshelf page",
       "provider": "NCBI Bookshelf",
       "format": "html",
-      "source_pack": "dyspnea"
+      "source_pack": "dyspnea",
+      "presentation_tags": ["chest_pain", "dyspnea", "fever"],
+      "condition_tags": ["pneumonia"],
+      "specialty_tags": ["infectious_disease", "internal_medicine", "pulmonology"]
     }
   ]
 }

@@ -8,6 +8,7 @@ from medreason_graph.lexicon import SOURCE_TYPE_WEIGHT
 from medreason_graph.logging_utils import log_event
 from medreason_graph.models import RetrievalHit, SourceChunk
 from medreason_graph.query import QueryPart
+from medreason_graph.retrieval_scoring import metadata_boost_parts
 from medreason_graph.text import detect_concepts
 from medreason_graph.text import cosine_from_counts, expand_query_terms, term_frequency, tokenize
 
@@ -130,29 +131,39 @@ class HybridRetriever:
             quality_score = SOURCE_TYPE_WEIGHT.get(chunk.source_type, SOURCE_TYPE_WEIGHT["unknown"])
             section_score = part.section_boosts.get(chunk.section_type, 0.0)
             condition_score = _condition_overlap_score(" ".join([chunk.title, *chunk.section_path, chunk.text]), part.condition_boosts)
+            metadata_scores = metadata_boost_parts(part, chunk)
             score = part.weight * (
                 (0.58 * bm25_score)
                 + (0.18 * semantic_score)
                 + (0.1 * quality_score)
                 + section_score
                 + condition_score
+                + sum(metadata_scores.values())
             )
             if score <= 0:
                 continue
             matched = sorted(set(query_tokens) & set(self.chunk_tokens.get(chunk.id, [])))
+            score_parts = {
+                f"{part.label}.bm25": round(part.weight * 0.58 * bm25_score, 6),
+                f"{part.label}.semantic": round(part.weight * 0.18 * semantic_score, 6),
+                f"{part.label}.source_quality": round(part.weight * 0.1 * quality_score, 6),
+                f"{part.label}.section": round(part.weight * section_score, 6),
+                f"{part.label}.condition": round(part.weight * condition_score, 6),
+            }
+            score_parts.update(
+                {
+                    f"{part.label}.{name}": round(part.weight * value, 6)
+                    for name, value in metadata_scores.items()
+                    if value > 0
+                }
+            )
             hits.append(
                 RetrievalHit(
                     chunk=chunk,
                     score=round(score, 6),
                     matched_terms=matched,
                     query_labels=[part.label],
-                    score_parts={
-                        f"{part.label}.bm25": round(part.weight * 0.58 * bm25_score, 6),
-                        f"{part.label}.semantic": round(part.weight * 0.18 * semantic_score, 6),
-                        f"{part.label}.source_quality": round(part.weight * 0.1 * quality_score, 6),
-                        f"{part.label}.section": round(part.weight * section_score, 6),
-                        f"{part.label}.condition": round(part.weight * condition_score, 6),
-                    },
+                    score_parts=score_parts,
                 )
             )
         hits.sort(key=lambda hit: hit.score, reverse=True)

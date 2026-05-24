@@ -103,6 +103,15 @@ medreason-graph graph-query verifier-failures --graph data/graphs/case.sqlite
 
 The seed open corpus manifest is [sources/open_medical_sources.json](sources/open_medical_sources.json). The downloader only accepts HTTPS URLs from allowlisted official domains and records license/provider/checksum metadata.
 
+The corpus stays physically unified, but each source can carry routing tags:
+
+- `source_pack`, for broad packs such as `chest_pain` or `dyspnea`;
+- `presentation_tags`, for presenting complaints such as `chest_pain`, `dyspnea`, or `fever`;
+- `condition_tags`, for covered conditions such as `acute coronary syndrome`;
+- `specialty_tags`, for broad specialties such as `emergency_medicine`.
+
+Those tags are copied to every ingested chunk and used as conservative retrieval boosts by the in-memory, SQLite, and FAISS backends. They do not filter out unrelated-but-relevant chunks.
+
 Build the seed corpus:
 
 ```bash

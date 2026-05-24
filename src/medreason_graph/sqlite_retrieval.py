@@ -9,6 +9,7 @@ from medreason_graph.lexicon import SOURCE_TYPE_WEIGHT
 from medreason_graph.logging_utils import log_event
 from medreason_graph.models import RetrievalHit, SourceChunk
 from medreason_graph.query import QueryPart
+from medreason_graph.retrieval_scoring import metadata_boost_parts
 from medreason_graph.text import detect_concepts, expand_query_terms, term_frequency, tokenize
 
 logger = logging.getLogger(__name__)
@@ -136,12 +137,28 @@ class SQLiteFTSRetriever:
             condition_score = _condition_overlap_score(" ".join([chunk.title, *chunk.section_path, chunk.text]), part.condition_boosts)
             matched_terms = sorted(set(query_terms) & set(tokenize(" ".join([chunk.title, *chunk.section_path, chunk.text]))))
             coverage_score = _coverage_score(query_terms, matched_terms)
+            metadata_scores = metadata_boost_parts(part, chunk)
             score = part.weight * (
                 (0.62 * lexical_score)
                 + (0.16 * coverage_score)
                 + (0.1 * quality_score)
                 + section_score
                 + condition_score
+                + sum(metadata_scores.values())
+            )
+            score_parts = {
+                f"{part.label}.fts_bm25": round(part.weight * 0.62 * lexical_score, 6),
+                f"{part.label}.coverage": round(part.weight * 0.16 * coverage_score, 6),
+                f"{part.label}.source_quality": round(part.weight * 0.1 * quality_score, 6),
+                f"{part.label}.section": round(part.weight * section_score, 6),
+                f"{part.label}.condition": round(part.weight * condition_score, 6),
+            }
+            score_parts.update(
+                {
+                    f"{part.label}.{name}": round(part.weight * value, 6)
+                    for name, value in metadata_scores.items()
+                    if value > 0
+                }
             )
             hits.append(
                 RetrievalHit(
@@ -149,13 +166,7 @@ class SQLiteFTSRetriever:
                     score=round(score, 6),
                     matched_terms=matched_terms,
                     query_labels=[part.label],
-                    score_parts={
-                        f"{part.label}.fts_bm25": round(part.weight * 0.62 * lexical_score, 6),
-                        f"{part.label}.coverage": round(part.weight * 0.16 * coverage_score, 6),
-                        f"{part.label}.source_quality": round(part.weight * 0.1 * quality_score, 6),
-                        f"{part.label}.section": round(part.weight * section_score, 6),
-                        f"{part.label}.condition": round(part.weight * condition_score, 6),
-                    },
+                    score_parts=score_parts,
                 )
             )
         hits.sort(key=lambda hit: hit.score, reverse=True)
@@ -192,4 +203,3 @@ def _condition_overlap_score(text: str, condition_boosts: set[str]) -> float:
     if not overlap:
         return 0.0
     return min(0.45, 0.18 * len(overlap))
-

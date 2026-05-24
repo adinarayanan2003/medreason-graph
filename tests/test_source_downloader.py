@@ -62,6 +62,9 @@ class SourceDownloaderTest(unittest.TestCase):
                                 "provider": "NCBI Bookshelf",
                                 "format": "markdown",
                                 "source_pack": "demo",
+                                "presentation_tags": ["chest_pain"],
+                                "condition_tags": ["acute coronary syndrome"],
+                                "specialty_tags": ["emergency_medicine"],
                                 "sha256": "abc",
                             }
                         ]
@@ -79,6 +82,36 @@ class SourceDownloaderTest(unittest.TestCase):
         self.assertEqual(chunks[0].metadata["provider"], "NCBI Bookshelf")
         self.assertEqual(chunks[0].metadata["source_manifest_id"], "source")
         self.assertEqual(chunks[0].metadata["source_pack"], "demo")
+        self.assertEqual(chunks[0].metadata["presentation_tags"], ["chest_pain"])
+        self.assertEqual(chunks[0].metadata["condition_tags"], ["acute coronary syndrome"])
+        self.assertEqual(chunks[0].metadata["specialty_tags"], ["emergency_medicine"])
+
+    def test_downloader_rejects_invalid_tag_shapes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "sources": [
+                            {
+                                "id": "bad_tags",
+                                "title": "Bad Tags",
+                                "url": "https://www.ncbi.nlm.nih.gov/books/example",
+                                "file_name": "bad.html",
+                                "source_type": "textbook",
+                                "license": "test license",
+                                "provider": "NCBI Bookshelf",
+                                "format": "html",
+                                "presentation_tags": "chest_pain",
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(ValueError):
+                download_allowlisted_sources(manifest_path, Path(temp_dir) / "out", delay_seconds=0)
 
 
 if __name__ == "__main__":

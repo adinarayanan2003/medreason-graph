@@ -198,12 +198,14 @@ Acceptance:
 
 ## Stage 8: Medical Case Evaluation Suite
 
-Status: in progress; Stage 8A complete.
+Status: in progress; Stage 8A and 8C complete.
 
 Goal: measure reasoning quality, not just final diagnosis accuracy.
 
 - Stage 8A completed:
   expanded the allowlisted open corpus for chest pain and dyspnea source packs, added pneumonia/asthma terminology coverage, added real-demo cases, and added a repeatable generator for reports, analysis JSON, graph stores, and verifier-failure files from the downloaded corpus.
+- Stage 8C completed:
+  unified corpus tagging with source packs, presentation tags, condition tags, specialty tags, tag propagation into chunks, and conservative metadata-aware retrieval boosts across in-memory, SQLite, and FAISS backends.
 - Build real-demo, de-identified, or carefully labeled case sets for chest pain, headache, dyspnea, fever, abdominal pain, syncope, and altered mental status. Synthetic cases are optional and should not be used as the main proof of quality.
 - Define expected:
   top differentials,

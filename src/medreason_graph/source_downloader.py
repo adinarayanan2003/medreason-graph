@@ -24,6 +24,7 @@ ALLOWED_DOMAINS = {
     "www.who.int",
     "who.int",
 }
+TAG_LIST_FIELDS = ("presentation_tags", "condition_tags", "specialty_tags")
 
 
 def load_source_manifest(path: str | Path) -> dict[str, Any]:
@@ -77,6 +78,9 @@ def build_downloaded_corpus(downloaded_manifest_path: str | Path, out_path: str 
                 "license": source.get("license"),
                 "url": source.get("url"),
                 "source_pack": source.get("source_pack"),
+                "presentation_tags": source.get("presentation_tags", []),
+                "condition_tags": source.get("condition_tags", []),
+                "specialty_tags": source.get("specialty_tags", []),
                 "sha256": source.get("sha256"),
             }
             enriched.append(
@@ -111,6 +115,27 @@ def _validate_source(source: dict[str, Any]) -> None:
         raise ValueError(f"source {source['id']} uses non-allowlisted domain: {parsed.netloc}")
     if ".." in Path(source["file_name"]).parts:
         raise ValueError(f"source {source['id']} has unsafe file_name")
+    _validate_tags(source)
+
+
+def _validate_tags(source: dict[str, Any]) -> None:
+    source_pack = source.get("source_pack")
+    if source_pack is not None and (not isinstance(source_pack, str) or not _is_snake_case_tag(source_pack)):
+        raise ValueError(f"source {source['id']} has invalid source_pack tag")
+    for field in TAG_LIST_FIELDS:
+        value = source.get(field, [])
+        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+            raise ValueError(f"source {source['id']} field {field} must be a list of strings")
+        if field != "condition_tags":
+            invalid = [item for item in value if not _is_snake_case_tag(item)]
+            if invalid:
+                raise ValueError(f"source {source['id']} field {field} has invalid tags: {invalid}")
+
+
+def _is_snake_case_tag(value: str) -> bool:
+    if not value:
+        return False
+    return all(char.islower() or char.isdigit() or char == "_" for char in value)
 
 
 def _download(url: str) -> tuple[bytes, dict[str, str]]:
